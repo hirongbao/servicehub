@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: servicehub
+  jackson:
+    time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+server:
+  port: 8080
+servicehub:
+  timezone: Asia/Shanghai
+  admin:
+    username: hirongbao
+    password: 123456
+  cos:
+    public-url-enabled: true
+  file:
+    allowed-content-types: image/jpeg,image/png,image/gif,image/webp
+    max-size: 10485760
