@@ -3,4 +3,7 @@ target/
 *.iml
 *.log
 application-local.yml
+.env
+.env.*
+!.env.example
 .DS_Store

@@ -1,4 +1,8 @@
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   application:
     name: servicehub
   jackson:
@@ -7,15 +11,28 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/servicehub?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
 server:
   port: 8080
 servicehub:
   timezone: Asia/Shanghai
   admin:
-    username: hirongbao
-    password: 123456
+    username: ${SERVICEHUB_ADMIN_USERNAME:hirongbao}
+    password: ${SERVICEHUB_ADMIN_PASSWORD:}
   cos:
-    public-url-enabled: true
+    secret-id: ${COS_SECRET_ID:}
+    secret-key: ${COS_SECRET_KEY:}
+    region: ${COS_REGION:ap-shanghai}
+    bucket: ${COS_BUCKET:}
+    public-url-enabled: ${COS_PUBLIC_URL_ENABLED:true}
   file:
     allowed-content-types: image/jpeg,image/png,image/gif,image/webp
     max-size: 10485760

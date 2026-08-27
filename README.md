@@ -15,8 +15,11 @@ ServiceHub 是面向个人项目的后端基础服务平台。v1 使用 Java 21�
 
 要求：Java 21、Maven 3.9+、MySQL 8、腾讯 COS 配置。
 
+首次使用时执行 `bash init-servicehub-env.sh` 持久化本地环境变量。该脚本生成的 `.env` 已被 Git 忽略。
+
 ```bash
-mvn spring-boot:run -pl servicehub-admin -am
+mvn -pl servicehub-admin -am package -DskipTests
+mvn -f servicehub-admin/pom.xml spring-boot:run
 ```
 
 默认端口为 `8080`，时区为 `Asia/Shanghai`。管理员默认账号为 `hirongbao`，密码为 `123456`。
