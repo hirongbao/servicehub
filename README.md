@@ -160,3 +160,16 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 ## v1 边界
 
 Redis、复杂权限、多用户、多租户、CDN、临时签名 URL 和异常补偿暂不实现。
+
+## 自动部署（systemd timer）
+
+本项目在 WSL 中配置了基于 systemd user timer 的简易 CI/CD：每 2 分钟检查一次 GitHub 上 `main` 分支的最新 commit，若与上次已部署的 commit 不同，则自动重新打包（`mvn -pl servicehub-admin -am package -DskipTests`）并重启 `servicehub-backend` 服务。
+
+日常开发中**推送到 GitHub 后无需手动重启服务**，最迟约 2 分钟后新代码自动生效（本地提交但未推送不会触发部署）。
+
+组成：
+
+- 部署脚本：`~/projects/deploy-check.sh`（对比 `origin/main` 与 `~/.local/state/servicehub-deploy/backend` 中记录的 commit）
+- 定时器：`~/.config/systemd/user/servicehub-deploy.timer`，随 WSL 开机自启
+- 查看部署日志：`journalctl --user -u servicehub-deploy -f`
+- 临时停用自动部署：`systemctl --user disable --now servicehub-deploy.timer`
