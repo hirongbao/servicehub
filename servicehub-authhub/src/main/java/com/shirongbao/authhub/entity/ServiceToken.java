@@ -6,6 +6,7 @@
 package com.shirongbao.authhub.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -24,4 +25,9 @@ public class ServiceToken {
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @TableField(exist = false)
+    private Long usageCount;
+    @TableField(exist = false)
+    private LocalDateTime lastUsedAt;
 }

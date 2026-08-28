@@ -5,6 +5,7 @@
  */
 package com.shirongbao.filehub.controller;
 
+import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.filehub.entity.FileRecord;
@@ -24,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/filehub")
 public class PublicFileHubController {
+    private static final String HUB = "FILEHUB";
     private final FileRecordService service;
     private final ServiceTokenService tokenService;
 
@@ -37,7 +39,7 @@ public class PublicFileHubController {
     @GetMapping
     public ApiResponse<List<FileRecord>> list(@RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                               @RequestHeader(value = "Authorization", required = false) String authorization) {
-        checkToken(serviceToken, authorization);
+        recordUsage(serviceToken, authorization, "list");
         return ApiResponse.success(service.list());
     }
 
@@ -46,7 +48,7 @@ public class PublicFileHubController {
     public ApiResponse<FileRecord> upload(@RequestPart("file") MultipartFile file,
                                           @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                           @RequestHeader(value = "Authorization", required = false) String authorization) {
-        checkToken(serviceToken, authorization);
+        recordUsage(serviceToken, authorization, "upload");
         return ApiResponse.success(service.upload(file));
     }
 
@@ -55,19 +57,17 @@ public class PublicFileHubController {
     public ApiResponse<Void> delete(@PathVariable Long id,
                                     @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                     @RequestHeader(value = "Authorization", required = false) String authorization) {
-        checkToken(serviceToken, authorization);
+        recordUsage(serviceToken, authorization, "delete");
         service.delete(id);
         return ApiResponse.success();
     }
 
-    // 校验 FileHub 服务 Token
-    private void checkToken(String serviceToken, String authorization) {
+    // 校验服务 Token 并记录使用日志
+    private void recordUsage(String serviceToken, String authorization, String action) {
         String token = serviceToken;
         if ((token == null || token.isBlank()) && authorization != null && authorization.startsWith("Bearer ")) {
             token = authorization.substring(7).trim();
         }
-        if (!tokenService.isActive(token)) {
-            throw new IllegalArgumentException("FileHub Token 无效、已禁用或已过期");
-        }
+        tokenService.recordUsage(tokenService.requireActive(token, HUB), action);
     }
 }

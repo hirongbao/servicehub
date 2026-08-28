@@ -57,7 +57,13 @@ servicehub
    mvn -f servicehub-admin/pom.xml spring-boot:run
    ```
 
-   或打包后运行：
+   注意：该命令从本地 Maven 仓库（`~/.m2`）读取兄弟模块的快照 jar。修改了子模块代码后，需要先安装再启动，否则会运行旧代码：
+
+   ```bash
+   mvn -pl servicehub-admin -am install -DskipTests
+   ```
+
+   或打包后运行（始终使用最新代码）：
 
    ```bash
    mvn -pl servicehub-admin -am package -DskipTests

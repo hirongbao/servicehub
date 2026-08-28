@@ -8,28 +8,48 @@ package com.shirongbao.authhub.service;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.authhub.dto.TokenCreateRequest;
+import com.shirongbao.authhub.dto.TokenUsageStats;
 import com.shirongbao.authhub.entity.ServiceToken;
+import com.shirongbao.authhub.entity.TokenUsageLog;
 import com.shirongbao.authhub.mapper.ServiceTokenMapper;
+import com.shirongbao.authhub.mapper.TokenUsageLogMapper;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ServiceTokenService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final ServiceTokenMapper mapper;
+    private final TokenUsageLogMapper usageLogMapper;
 
     // 初始化 Token 业务服务
-    public ServiceTokenService(ServiceTokenMapper mapper) {
+    public ServiceTokenService(ServiceTokenMapper mapper, TokenUsageLogMapper usageLogMapper) {
         this.mapper = mapper;
+        this.usageLogMapper = usageLogMapper;
     }
 
-    // 查询全部服务 Token
+    // 查询全部服务 Token，并附带使用统计
     public List<ServiceToken> list() {
-        return mapper.selectList(null);
+        List<ServiceToken> tokens = mapper.selectList(null);
+        if (!tokens.isEmpty()) {
+            Map<Long, TokenUsageStats> stats = usageLogMapper.selectUsageStats().stream()
+                    .collect(Collectors.toMap(TokenUsageStats::getTokenId, Function.identity()));
+            for (ServiceToken token : tokens) {
+                TokenUsageStats s = stats.get(token.getId());
+                if (s != null) {
+                    token.setUsageCount(s.getUsageCount());
+                    token.setLastUsedAt(s.getLastUsedAt());
+                }
+            }
+        }
+        return tokens;
     }
 
     // 创建服务 Token
@@ -64,26 +84,32 @@ public class ServiceTokenService {
         }
     }
 
-    // 校验 FileHub 服务 Token 是否有效
-    public boolean isActive(String tokenValue) {
+    // 校验并返回指定 hub 的有效服务 Token
+    public ServiceToken requireActive(String tokenValue, String hub) {
         if (StringUtils.isBlank(tokenValue)) {
-            return false;
+            throw new IllegalArgumentException("Token 无效、已禁用或已过期");
         }
         ServiceToken token = mapper.selectOne(new QueryWrapper<ServiceToken>().eq("token_value", tokenValue));
-        return token != null && token.getStatus() == 1
-                && "FILEHUB".equals(token.getTokenType())
-                && (token.getExpiresAt() == null || token.getExpiresAt().isAfter(LocalDateTime.now()));
+        if (token == null || token.getStatus() != 1 || !hub.equals(token.getTokenType())
+                || (token.getExpiresAt() != null && !token.getExpiresAt().isAfter(LocalDateTime.now()))) {
+            throw new IllegalArgumentException("Token 无效、已禁用或已过期");
+        }
+        return token;
+    }
+
+    // 记录一次 Token 使用日志
+    public void recordUsage(ServiceToken token, String action) {
+        TokenUsageLog log = new TokenUsageLog();
+        log.setTokenId(token.getId());
+        log.setHub(token.getTokenType());
+        log.setAction(action);
+        usageLogMapper.insert(log);
     }
 
     // 生成随机服务 Token
     private String generateToken() {
-        byte[] bytes = new byte[ thirtyTwoBytes() ];
+        byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return "rb-" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    // 返回 Token 随机字节数
-    private int thirtyTwoBytes() {
-        return 32;
     }
 }
