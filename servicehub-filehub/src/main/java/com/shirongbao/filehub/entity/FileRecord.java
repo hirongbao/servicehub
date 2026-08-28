@@ -21,6 +21,7 @@ public class FileRecord {
     private String objectKey;
     private String fileUrl;
     private String contentType;
+    private String contentHash;
     private Long fileSize;
     private Integer status;
     private LocalDateTime createdAt;

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS file_record (
     object_key VARCHAR(512) NOT NULL UNIQUE,
     file_url VARCHAR(1024) NOT NULL,
     content_type VARCHAR(100) NOT NULL,
+    content_hash VARCHAR(64) NULL UNIQUE,
     file_size BIGINT NOT NULL,
     status TINYINT NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
