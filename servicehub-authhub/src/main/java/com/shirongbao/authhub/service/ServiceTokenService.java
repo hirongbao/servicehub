@@ -6,6 +6,7 @@
 package com.shirongbao.authhub.service;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.shirongbao.authhub.constant.TokenType;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.authhub.dto.TokenCreateRequest;
 import com.shirongbao.authhub.dto.TokenUsageStats;
@@ -52,11 +53,17 @@ public class ServiceTokenService {
         return tokens;
     }
 
-    // 创建服务 Token
+    // 创建服务 Token，类型必须是已支持的 hub
     public ServiceToken create(TokenCreateRequest request) {
+        String type = StringUtils.isBlank(request.tokenType()) ? TokenType.FILEHUB.name() : request.tokenType().toUpperCase();
+        try {
+            TokenType.valueOf(type);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("不支持的服务类型：" + type);
+        }
         ServiceToken token = new ServiceToken();
         token.setTokenName(request.tokenName());
-        token.setTokenType(StringUtils.isBlank(request.tokenType()) ? "FILEHUB" : request.tokenType().toUpperCase());
+        token.setTokenType(type);
         token.setTokenValue(generateToken());
         token.setStatus(1);
         if (request.validDays() != null && request.validDays() > 0) {
