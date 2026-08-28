@@ -35,10 +35,20 @@ servicehub
    docker compose up -d
    ```
 
-2. 初始化并编辑环境变量（首次执行会生成 `.env`，已被 Git 忽略）：
+2. 在项目根目录手动创建 `.env`（已被 Git 忽略，建议执行 `chmod 600 .env`）：
 
-   ```bash
-   bash init-servicehub-env.sh
+   ```dotenv
+   MYSQL_ROOT_PASSWORD=你的MySQL密码
+   DB_URL=jdbc:mysql://localhost:3306/servicehub?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+   DB_USERNAME=root
+   DB_PASSWORD=你的MySQL密码
+   SERVICEHUB_ADMIN_USERNAME=hirongbao
+   SERVICEHUB_ADMIN_PASSWORD=你的管理后台密码
+   COS_SECRET_ID=你的腾讯云SecretId
+   COS_SECRET_KEY=你的腾讯云SecretKey
+   COS_REGION=ap-shanghai
+   COS_BUCKET=你的Bucket名称
+   COS_PUBLIC_URL_ENABLED=true
    ```
 
 3. 启动应用（默认端口 `8080`，时区 `Asia/Shanghai`，启动时自动执行 `schema.sql` 建表）：
@@ -53,6 +63,49 @@ servicehub
    mvn -pl servicehub-admin -am package -DskipTests
    java -jar servicehub-admin/target/servicehub-admin-*.jar
    ```
+
+## WSL 环境安装（Ubuntu）
+
+从零搭建 WSL2 Ubuntu 开发环境时，可参考以下步骤（已装好环境的可跳过）。
+
+安装 Docker Engine 和 Compose 插件：
+
+```bash
+sudo apt-get install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc" | sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo groupadd --force docker && sudo usermod -aG docker "$USER"   # 需重新登录生效
+```
+
+安装 JDK 21、Maven 3.9（用户目录）和 Node.js 20：
+
+```bash
+sudo apt-get install -y openjdk-21-jdk curl ca-certificates
+sudo apt-get install -y mysql-client   # 可选，便于手动连库排查
+
+MAVEN_VERSION=3.9.11
+mkdir -p ~/.local/opt ~/.local/bin
+curl -fL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+  | tar -xz -C ~/.local/opt
+ln -sfn ~/.local/opt/apache-maven-${MAVEN_VERSION}/bin/mvn ~/.local/bin/mvn
+
+NODE_VERSION=20.20.2
+curl -fL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+  | tar -xJ -C ~/.local/opt
+ln -sfn ~/.local/opt/node-v${NODE_VERSION}/bin/node ~/.local/bin/node
+ln -sfn ~/.local/opt/node-v${NODE_VERSION}/bin/npm ~/.local/bin/npm
+```
+
+MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 
 ## 环境变量
 
