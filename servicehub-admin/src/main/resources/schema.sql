@@ -31,3 +31,21 @@ CREATE TABLE IF NOT EXISTS token_usage_log (
     KEY idx_token_id (token_id),
     KEY idx_hub_action (hub, action)
 );
+
+CREATE TABLE IF NOT EXISTS short_link (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(16) NOT NULL UNIQUE,
+    target_url VARCHAR(2048) NOT NULL,
+    remark VARCHAR(100) NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS link_visit_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    link_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_link_created (link_id, created_at)
+);

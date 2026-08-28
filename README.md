@@ -9,6 +9,7 @@ ServiceHub 是面向个人项目的后端基础服务平台。当前版本使用
 - **图片上传**：仅允许上传 JPG、PNG、GIF、WEBP 图片，单文件最大 10MB，存储到腾讯 COS 并记录文件信息。
 - **内容去重**：上传前按 SHA-256 内容哈希查重，重复图片直接返回已有记录，不再重复存储。
 - **开放文件接口**：第三方服务可使用 FILEHUB 类型 Token 调用图片查询、上传和删除接口。
+- **短链服务（LinkHub）**：长链接转短码跳转，支持自定义短码、有效期和点击统计；第三方服务可使用 LINKHUB 类型 Token 调用创建和查询接口。
 
 ## 技术栈
 
@@ -21,6 +22,7 @@ servicehub
 ├── servicehub-common    # 统一响应、异常、常量和公共工具
 ├── servicehub-authhub   # Token 管理、Token 类型校验
 ├── servicehub-filehub   # 图片上传、COS 存储、文件记录
+├── servicehub-linkhub   # 短链创建、跳转、访问统计
 └── servicehub-admin     # 管理后台 API 和应用启动模块
 ```
 
@@ -129,6 +131,7 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | `COS_REGION` | COS 地域 | `ap-shanghai` |
 | `COS_BUCKET` | COS Bucket 名称 | 空 |
 | `COS_PUBLIC_URL_ENABLED` | 是否生成公开访问 URL | `true` |
+| `SERVICEHUB_LINK_BASE_URL` | 短链展示用的基础地址（如 `https://s.example.com`），留空按请求 Host 推断 | 空 |
 
 ## API 一览
 
@@ -147,6 +150,11 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | GET | `/api/files` | 查询文件列表 |
 | POST | `/api/files/upload` | 上传图片，`multipart` 字段名 `file` |
 | DELETE | `/api/files/{id}` | 删除文件（同时删除 COS 对象） |
+| GET | `/api/links` | 查询短链列表（含点击统计） |
+| POST | `/api/links` | 创建短链，参数 `{ targetUrl, code?, remark?, validDays? }` |
+| POST | `/api/links/{id}/status` | 启用/禁用短链，参数 `{ status: 0 \| 1 }` |
+| DELETE | `/api/links/{id}` | 删除短链及访问记录 |
+| GET | `/api/links/{id}/stats` | 查询短链点击统计（总数 + 近 30 天按天） |
 
 ### 开放文件接口（FILEHUB Token 鉴权）
 
@@ -157,6 +165,19 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | GET | `/api/filehub` | 查询文件列表 |
 | POST | `/api/filehub/upload` | 上传图片 |
 | DELETE | `/api/filehub/{id}` | 删除图片 |
+
+### 开放短链接口（LINKHUB Token 鉴权）
+
+通过请求头 `X-Service-Token` 或 `Authorization: Bearer <token>` 携带 LINKHUB 类型 Token：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/linkhub/links` | 创建短链 |
+| GET | `/api/linkhub/links/{code}` | 查询短链详情和统计 |
+
+### 短链跳转
+
+`GET /s/{code}`：匿名可访问，302 跳转到目标地址；不存在、已禁用或已过期返回 404 页面。每次有效跳转记一次点击统计。
 
 ## v1 边界
 

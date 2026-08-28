@@ -18,11 +18,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
         this.adminAuthInterceptor = adminAuthInterceptor;
     }
 
-    // 注册管理端鉴权拦截器，放行登录和开放文件接口
+    // 注册管理端鉴权拦截器，放行登录、开放文件和开放短链接口
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/admin/login", "/api/filehub/**");
+                .excludePathPatterns("/api/admin/login", "/api/filehub/**", "/api/linkhub/**");
     }
 }
