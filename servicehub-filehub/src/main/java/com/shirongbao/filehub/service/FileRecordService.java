@@ -8,15 +8,13 @@ package com.shirongbao.filehub.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.filehub.entity.FileRecord;
 import com.shirongbao.filehub.mapper.FileRecordMapper;
+import com.shirongbao.filehub.util.ContentHash;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +40,12 @@ public class FileRecordService {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");
         if (file.getSize() > maxSize) throw new IllegalArgumentException("图片大小不能超过 10MB");
         if (!ALLOWED_TYPES.contains(file.getContentType())) throw new IllegalArgumentException("只允许上传 JPG、PNG、GIF 或 WEBP 图片");
-        String hash = sha256(file);
+        String hash;
+        try {
+            hash = ContentHash.of(file.getBytes());
+        } catch (IOException e) {
+            throw new IllegalStateException("读取上传文件失败", e);
+        }
         FileRecord existing = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
         if (existing != null) return existing;
         String objectKey = cos.upload(file);
@@ -69,15 +72,5 @@ public class FileRecordService {
         if (record == null) throw new IllegalArgumentException("文件不存在");
         cos.delete(record.getObjectKey());
         mapper.deleteById(id);
-    }
-
-    // 计算 SHA-256 内容哈希
-    private String sha256(MultipartFile file) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(file.getBytes());
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException | IOException e) {
-            throw new IllegalStateException("计算文件哈希失败", e);
-        }
     }
 }
