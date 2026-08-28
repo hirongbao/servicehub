@@ -7,5 +7,5 @@ package com.shirongbao.admin.dto;
 
 import jakarta.validation.constraints.NotNull;
 
-public record TokenStatusRequest(@NotNull Integer status) {
+public record TokenStatusRequest(@NotNull(message = "status 不能为空") Integer status) {
 }
