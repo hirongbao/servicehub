@@ -5,7 +5,6 @@
  */
 package com.shirongbao.admin.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.shirongbao.admin.dto.AdminLoginRequest;
 import com.shirongbao.common.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -30,20 +30,18 @@ public class AdminController {
         this.adminPassword = adminPassword;
     }
 
-    // 校验管理员账号并签发登录 Token
+    // 校验管理员账号并签发登录凭证
     @PostMapping("/login")
     public ApiResponse<Map<String, String>> login(@Valid @RequestBody AdminLoginRequest request) {
         if (!adminUsername.equals(request.username()) || !adminPassword.equals(request.password())) {
             throw new IllegalArgumentException("用户名或密码错误");
         }
-        StpUtil.login(request.username());
-        return ApiResponse.success(Map.of("token", StpUtil.getTokenValue(), "username", request.username()));
+        return ApiResponse.success(Map.of("token", UUID.randomUUID().toString().replace("-", ""), "username", request.username()));
     }
 
     // 注销当前管理员会话
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
-        StpUtil.logout();
         return ApiResponse.success();
     }
 }

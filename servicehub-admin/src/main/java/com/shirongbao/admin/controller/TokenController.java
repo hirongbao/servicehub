@@ -5,7 +5,6 @@
  */
 package com.shirongbao.admin.controller;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.shirongbao.authhub.dto.TokenCreateRequest;
 import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.service.ServiceTokenService;
@@ -22,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@SaCheckLogin
 @RestController
 @RequestMapping("/api/tokens")
 public class TokenController {

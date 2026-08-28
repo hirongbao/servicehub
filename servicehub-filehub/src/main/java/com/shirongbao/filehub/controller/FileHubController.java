@@ -5,7 +5,6 @@
  */
 package com.shirongbao.filehub.controller;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.filehub.entity.FileRecord;
 import com.shirongbao.filehub.service.FileRecordService;
@@ -20,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@SaCheckLogin
 @RestController
 @RequestMapping("/api/files")
 public class FileHubController {
