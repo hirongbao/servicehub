@@ -11,6 +11,7 @@ import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +25,7 @@ public class CosStorageService {
     private final String secretKey;
     private final String region;
     private final String bucket;
+    private volatile COSClient client;
 
     public CosStorageService(@Value("${servicehub.cos.secret-id}") String secretId,
                              @Value("${servicehub.cos.secret-key}") String secretKey,
@@ -37,28 +39,21 @@ public class CosStorageService {
 
     // 上传图片到腾讯 COS
     public String upload(MultipartFile file) {
-        if (secretId.isBlank() || secretKey.isBlank() || bucket.isBlank()) {
-            throw new IllegalStateException("COS 配置不完整，请检查 COS_SECRET_ID、COS_SECRET_KEY 和 COS_BUCKET");
-        }
         String objectKey = "images/" + UUID.randomUUID() + getExtension(file.getOriginalFilename());
-        COSClient client = createClient();
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(file.getSize());
+        metadata.setContentType(file.getContentType());
         try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize());
-            metadata.setContentType(file.getContentType());
-            client.putObject(new PutObjectRequest(bucket, objectKey, file.getInputStream(), metadata));
-            return objectKey;
+            client().putObject(new PutObjectRequest(bucket, objectKey, file.getInputStream(), metadata));
         } catch (IOException exception) {
             throw new IllegalStateException("读取上传文件失败", exception);
-        } finally {
-            client.shutdown();
         }
+        return objectKey;
     }
 
     // 删除 COS 中的图片对象
     public void delete(String objectKey) {
-        COSClient client = createClient();
-        try { client.deleteObject(bucket, objectKey); } finally { client.shutdown(); }
+        client().deleteObject(bucket, objectKey);
     }
 
     // 生成图片公开访问地址
@@ -66,10 +61,29 @@ public class CosStorageService {
         return "https://" + bucket + ".cos." + region + ".myqcloud.com/" + objectKey;
     }
 
-    // 创建 COS 客户端
-    private COSClient createClient() {
-        ClientConfig config = new ClientConfig(new Region(region));
-        return new COSClient(new BasicCOSCredentials(secretId, secretKey), config);
+    // 应用关闭时释放 COS 客户端资源
+    @PreDestroy
+    public void shutdown() {
+        if (client != null) {
+            client.shutdown();
+        }
+    }
+
+    // 获取复用的 COS 客户端，配置不完整时给出明确提示
+    private COSClient client() {
+        if (secretId.isBlank() || secretKey.isBlank() || bucket.isBlank()) {
+            throw new IllegalStateException("COS 配置不完整，请检查 COS_SECRET_ID、COS_SECRET_KEY 和 COS_BUCKET");
+        }
+        COSClient current = client;
+        if (current == null) {
+            synchronized (this) {
+                if (client == null) {
+                    client = new COSClient(new BasicCOSCredentials(secretId, secretKey), new ClientConfig(new Region(region)));
+                }
+                current = client;
+            }
+        }
+        return current;
     }
 
     // 获取文件扩展名

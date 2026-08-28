@@ -6,6 +6,8 @@
 package com.shirongbao.admin.exception;
 
 import com.shirongbao.common.response.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -13,6 +15,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // 处理业务异常，返回具体错误消息
     @ExceptionHandler(IllegalArgumentException.class)
@@ -36,9 +39,10 @@ public class GlobalExceptionHandler {
         return ApiResponse.error("图片大小不能超过 10MB");
     }
 
-    // 兜底处理未知异常，不向前端暴露堆栈信息
+    // 兜底处理未知异常，记录日志并返回通用消息
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleOther(Exception e) {
+        log.error("接口处理出现未预期异常", e);
         return ApiResponse.error("服务暂时不可用，请稍后再试");
     }
 }

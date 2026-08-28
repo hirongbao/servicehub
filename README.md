@@ -124,6 +124,7 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | `DB_PASSWORD` | 数据库密码 | 空 |
 | `SERVICEHUB_ADMIN_USERNAME` | 管理员账号 | `hirongbao` |
 | `SERVICEHUB_ADMIN_PASSWORD` | 管理员密码 | 空 |
+| `SERVICEHUB_AUTH_SECRET` | 登录凭证签名密钥，留空则每次重启后需重新登录 | 空 |
 | `COS_SECRET_ID` / `COS_SECRET_KEY` | 腾讯云密钥 | 空 |
 | `COS_REGION` | COS 地域 | `ap-shanghai` |
 | `COS_BUCKET` | COS Bucket 名称 | 空 |
@@ -173,3 +174,5 @@ Redis、复杂权限、多用户、多租户、CDN、临时签名 URL 和异常�
 - 定时器：`~/.config/systemd/user/servicehub-deploy.timer`，随 WSL 开机自启
 - 查看部署日志：`journalctl --user -u servicehub-deploy -f`
 - 临时停用自动部署：`systemctl --user disable --now servicehub-deploy.timer`
+
+注意：systemd 服务与手动运行的实例不能同时启动（端口 `8080` 冲突）。若推送代码时手动实例还在运行，自动部署重启的 systemd 后端会因端口占用反复重试，直到手动实例停止。建议平时让 systemd 服务接管后端，需要临时调试再手动启动，用完即停。
