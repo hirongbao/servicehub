@@ -7,3 +7,4 @@ application-local.yml
 .env.*
 !.env.example
 .DS_Store
+logs/

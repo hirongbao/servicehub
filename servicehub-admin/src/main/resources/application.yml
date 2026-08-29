@@ -22,6 +22,18 @@ spring:
       encoding: UTF-8
 server:
   port: 8080
+
+# 日志输出到项目 logs 目录，按实例端口分文件，滚动归档保留 7 天
+logging:
+  file:
+    name: logs/servicehub-${server.port}.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: logs/servicehub-${server.port}.%d{yyyy-MM-dd}.%i.log.gz
+      max-file-size: 10MB
+      total-size-cap: 200MB
+      max-history: 7
+      clean-history-on-start: true
 servicehub:
   timezone: Asia/Shanghai
   admin:
