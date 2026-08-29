@@ -7,6 +7,7 @@ package com.shirongbao.linkhub.controller;
 
 import com.shirongbao.linkhub.entity.ShortLink;
 import com.shirongbao.linkhub.service.ShortLinkService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,14 +33,14 @@ public class RedirectController {
 
     // 处理短链跳转，记录访问并 302 到目标地址
     @GetMapping("/s/{code}")
-    public ResponseEntity<String> redirect(@PathVariable String code) {
+    public ResponseEntity<String> redirect(@PathVariable String code, HttpServletRequest request) {
         ShortLink link = service.resolve(code);
         if (link == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .contentType(MediaType.TEXT_HTML)
                     .body(NOT_FOUND_PAGE);
         }
-        service.recordVisit(link.getId());
+        service.recordVisit(link.getId(), request.getHeader("Referer"), request.getHeader("User-Agent"));
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(java.net.URI.create(link.getTargetUrl()))
                 .build();

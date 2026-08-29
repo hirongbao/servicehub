@@ -8,6 +8,7 @@ package com.shirongbao.linkhub.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.linkhub.dto.LinkCreateRequest;
 import com.shirongbao.linkhub.dto.LinkDailyVisit;
+import com.shirongbao.linkhub.dto.LinkLabelVisit;
 import com.shirongbao.linkhub.dto.LinkVisitStats;
 import com.shirongbao.linkhub.entity.LinkVisitLog;
 import com.shirongbao.linkhub.entity.ShortLink;
@@ -19,8 +20,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -112,10 +115,12 @@ public class ShortLinkService {
         return link;
     }
 
-    // 记录一次短链访问
-    public void recordVisit(Long linkId) {
+    // 记录一次短链访问，保留来源和设备信息
+    public void recordVisit(Long linkId, String referer, String userAgent) {
         LinkVisitLog visit = new LinkVisitLog();
         visit.setLinkId(linkId);
+        visit.setReferer(truncate(referer, 512));
+        visit.setUserAgent(truncate(userAgent, 512));
         visitMapper.insert(visit);
     }
 
@@ -138,7 +143,7 @@ public class ShortLinkService {
         visitMapper.delete(new QueryWrapper<LinkVisitLog>().eq("link_id", id));
     }
 
-    // 查询短链的按天访问统计
+    // 查询短链的按天、来源和设备访问统计
     public Map<String, Object> stats(Long id) {
         ShortLink link = mapper.selectById(id);
         if (link == null) {
@@ -146,7 +151,10 @@ public class ShortLinkService {
         }
         Long total = visitMapper.selectCount(new QueryWrapper<LinkVisitLog>().eq("link_id", id));
         List<LinkDailyVisit> daily = visitMapper.selectDailyVisits(id, LocalDateTime.now().minusDays(30));
-        return Map.of("total", total == null ? 0 : total, "daily", daily);
+        return Map.of("total", total == null ? 0 : total,
+                "daily", daily,
+                "sources", buildSources(total == null ? 0 : total, visitMapper.selectRefererVisits(id)),
+                "devices", sortDevices(visitMapper.selectDeviceVisits(id)));
     }
 
     // 拼接短链完整地址，未配置 base-url 时按请求推断
@@ -160,6 +168,67 @@ public class ShortLinkService {
             scheme = request.getScheme();
         }
         return scheme + "://" + host + "/s/" + code;
+    }
+
+    // 按引用域名聚合访问来源并补充直接访问，按次数倒序取前十
+    private List<LinkLabelVisit> buildSources(long total, List<LinkLabelVisit> referers) {
+        Map<String, Long> hosts = new LinkedHashMap<>();
+        long withReferer = 0;
+        for (LinkLabelVisit r : referers) {
+            long visits = r.getVisits() == null ? 0 : r.getVisits();
+            withReferer += visits;
+            hosts.merge(hostOf(r.getLabel()), visits, Long::sum);
+        }
+        List<LinkLabelVisit> sources = hosts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(10)
+                .map(e -> labelVisit(e.getKey(), e.getValue()))
+                .collect(Collectors.toList());
+        if (total > withReferer) {
+            sources.add(labelVisit("直接访问", total - withReferer));
+        }
+        sources.sort((a, b) -> Long.compare(b.getVisits(), a.getVisits()));
+        return sources.stream().limit(10).toList();
+    }
+
+    // 从引用地址中提取展示用的域名
+    private String hostOf(String referer) {
+        try {
+            String host = URI.create(referer).getHost();
+            if (host != null) {
+                return host;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // 非法引用地址，按原文展示
+        }
+        return referer.length() > 50 ? referer.substring(0, 50) : referer;
+    }
+
+    // 设备维度按访问次数倒序排列
+    private List<LinkLabelVisit> sortDevices(List<LinkLabelVisit> devices) {
+        return devices.stream()
+                .peek(d -> {
+                    if (d.getVisits() == null) d.setVisits(0L);
+                })
+                .sorted((a, b) -> Long.compare(b.getVisits(), a.getVisits()))
+                .toList();
+    }
+
+    // 构造一条来源或设备统计
+    private LinkLabelVisit labelVisit(String label, long visits) {
+        LinkLabelVisit visit = new LinkLabelVisit();
+        visit.setLabel(label);
+        visit.setVisits(visits);
+        return visit;
+    }
+
+    // 截断字符串到指定长度，空白返回 null
+    private String truncate(String value, int maxLength) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.length() > maxLength ? trimmed.substring(0, maxLength) : trimmed;
     }
 
     // 使用随机短码插入，唯一索引冲突时重试
