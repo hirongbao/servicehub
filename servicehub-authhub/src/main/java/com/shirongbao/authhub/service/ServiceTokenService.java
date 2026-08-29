@@ -6,10 +6,12 @@
 package com.shirongbao.authhub.service;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.authhub.constant.TokenType;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.authhub.dto.TokenCreateRequest;
 import com.shirongbao.authhub.dto.TokenUsageStats;
+import com.shirongbao.authhub.dto.UsageLogItem;
 import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.entity.TokenUsageLog;
 import com.shirongbao.authhub.mapper.ServiceTokenMapper;
@@ -130,6 +132,22 @@ public class ServiceTokenService {
         log.setHub(token.getTokenType());
         log.setAction(action);
         usageLogMapper.insert(log);
+    }
+
+    // 分页查询 Token 使用日志，并附带 Token 名称
+    public Map<String, Object> pageUsage(String hub, long page, long size) {
+        Page<TokenUsageLog> result = usageLogMapper.selectPage(new Page<>(page, size),
+                new QueryWrapper<TokenUsageLog>()
+                        .eq(StringUtils.isNotBlank(hub), "hub", hub)
+                        .orderByDesc("created_at"));
+        List<Long> tokenIds = result.getRecords().stream().map(TokenUsageLog::getTokenId).distinct().toList();
+        Map<Long, String> names = tokenIds.isEmpty() ? Map.of() : mapper.selectBatchIds(tokenIds).stream()
+                .collect(Collectors.toMap(ServiceToken::getId, ServiceToken::getTokenName));
+        List<UsageLogItem> records = result.getRecords().stream()
+                .map(l -> new UsageLogItem(l.getId(), names.getOrDefault(l.getTokenId(), "已删除"),
+                        l.getHub(), l.getAction(), l.getCreatedAt()))
+                .toList();
+        return Map.of("total", result.getTotal(), "records", records);
     }
 
     // 生成随机服务 Token
