@@ -5,6 +5,7 @@
  */
 package com.shirongbao.admin.security;
 
+import com.shirongbao.admin.log.RequestLogInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -12,15 +13,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminAuthInterceptor adminAuthInterceptor;
+    private final RequestLogInterceptor requestLogInterceptor = new RequestLogInterceptor();
 
     // 初始化拦截器注册配置
     public WebMvcConfig(AdminAuthInterceptor adminAuthInterceptor) {
         this.adminAuthInterceptor = adminAuthInterceptor;
     }
 
-    // 注册管理端鉴权拦截器，放行登录、开放文件和开放短链接口
+    // 注册请求日志和管理端鉴权拦截器，放行登录、开放文件和开放短链接口
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(requestLogInterceptor).addPathPatterns("/**");
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/admin/login", "/api/filehub/**", "/api/linkhub/**");

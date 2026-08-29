@@ -6,6 +6,7 @@
 package com.shirongbao.filehub.controller;
 
 import com.shirongbao.authhub.entity.ServiceToken;
+import jakarta.servlet.http.HttpServletRequest;
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.filehub.entity.FileRecord;
@@ -37,37 +38,42 @@ public class PublicFileHubController {
 
     // 查询文件列表
     @GetMapping
-    public ApiResponse<List<FileRecord>> list(@RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+    public ApiResponse<List<FileRecord>> list(HttpServletRequest request,
+                                              @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                               @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(serviceToken, authorization, "list");
+        recordUsage(request, serviceToken, authorization, "list");
         return ApiResponse.success(service.list());
     }
 
     // 使用 FileHub Token 上传图片
     @PostMapping("/upload")
     public ApiResponse<FileRecord> upload(@RequestPart("file") MultipartFile file,
+                                          HttpServletRequest request,
                                           @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                           @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(serviceToken, authorization, "upload");
+        recordUsage(request, serviceToken, authorization, "upload");
         return ApiResponse.success(service.upload(file));
     }
 
     // 使用 FileHub Token 删除图片
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id,
+                                    HttpServletRequest request,
                                     @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                     @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(serviceToken, authorization, "delete");
+        recordUsage(request, serviceToken, authorization, "delete");
         service.delete(id);
         return ApiResponse.success();
     }
 
     // 校验服务 Token 并记录使用日志
-    private void recordUsage(String serviceToken, String authorization, String action) {
+    private void recordUsage(HttpServletRequest request, String serviceToken, String authorization, String action) {
         String token = serviceToken;
         if ((token == null || token.isBlank()) && authorization != null && authorization.startsWith("Bearer ")) {
             token = authorization.substring(7).trim();
         }
-        tokenService.recordUsage(tokenService.requireActive(token, HUB), action);
+        ServiceToken serviceTokenEntity = tokenService.requireActive(token, HUB);
+        request.setAttribute("auth.tokenName", serviceTokenEntity.getTokenName());
+        tokenService.recordUsage(serviceTokenEntity, action);
     }
 }

@@ -34,6 +34,16 @@ public class AdminCredentialService {
         return issue(username, System.currentTimeMillis() + TTL_MILLIS);
     }
 
+    // 校验管理员登录凭证，有效时返回凭证中的用户名
+    public String resolveUsername(String credential) {
+        if (!verify(credential)) {
+            return null;
+        }
+        int dot = credential.lastIndexOf('.');
+        String payload = new String(Base64.getUrlDecoder().decode(credential.substring(0, dot)), StandardCharsets.UTF_8);
+        return payload.substring(0, payload.lastIndexOf(':'));
+    }
+
     // 校验管理员登录凭证是否有效
     public boolean verify(String credential) {
         int dot = credential == null ? -1 : credential.lastIndexOf('.');

@@ -6,6 +6,7 @@
 package com.shirongbao.linkhub.controller;
 
 import com.shirongbao.authhub.entity.ServiceToken;
+import jakarta.servlet.http.HttpServletRequest;
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.linkhub.dto.LinkCreateRequest;
@@ -42,7 +43,7 @@ public class PublicLinkController {
                                          HttpServletRequest httpRequest,
                                          @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                          @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(serviceToken, authorization, "create");
+        recordUsage(httpRequest, serviceToken, authorization, "create");
         ShortLink link = service.create(request);
         link.setTargetUrl(service.fullUrl(link.getCode(), httpRequest));
         return ApiResponse.success(link);
@@ -51,9 +52,10 @@ public class PublicLinkController {
     // 使用 LINKHUB Token 查询短链详情和统计
     @GetMapping("/links/{code}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable String code,
+                                                   HttpServletRequest request,
                                                    @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
                                                    @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(serviceToken, authorization, "query");
+        recordUsage(request, serviceToken, authorization, "query");
         ShortLink link = service.resolve(code);
         if (link == null) {
             throw new IllegalArgumentException("短链不存在、已禁用或已过期");
@@ -62,11 +64,13 @@ public class PublicLinkController {
     }
 
     // 校验服务 Token 并记录使用日志
-    private void recordUsage(String serviceToken, String authorization, String action) {
+    private void recordUsage(HttpServletRequest request, String serviceToken, String authorization, String action) {
         String token = serviceToken;
         if ((token == null || token.isBlank()) && authorization != null && authorization.startsWith("Bearer ")) {
             token = authorization.substring(7).trim();
         }
-        tokenService.recordUsage(tokenService.requireActive(token, HUB), action);
+        ServiceToken serviceTokenEntity = tokenService.requireActive(token, HUB);
+        request.setAttribute("auth.tokenName", serviceTokenEntity.getTokenName());
+        tokenService.recordUsage(serviceTokenEntity, action);
     }
 }

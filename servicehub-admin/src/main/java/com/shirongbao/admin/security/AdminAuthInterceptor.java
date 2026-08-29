@@ -23,7 +23,7 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         this.objectMapper = objectMapper;
     }
 
-    // 校验请求携带的登录凭证，失败时返回 401 和统一响应
+    // 校验请求携带的登录凭证，通过时记录用户名，失败时返回 401 和统一响应
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String credential = request.getHeader("Authorization");
@@ -33,7 +33,9 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
             String legacy = request.getHeader("satoken");
             credential = legacy == null ? credential : legacy.trim();
         }
-        if (credentials.verify(credential)) {
+        String username = credentials.resolveUsername(credential);
+        if (username != null) {
+            request.setAttribute("auth.user", username);
             return true;
         }
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
