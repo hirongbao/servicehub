@@ -201,10 +201,12 @@ tail -f logs/servicehub-8080.log
 
 ### Web 日志查看器（Log Viewer）
 
-本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），浏览器打开即看：
+本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），并经 Vite 代理挂在 `/logs-ui` 路径下。浏览器打开即看：
 
-- 管理页（文件选择）：`http://localhost:8111/`
-- 直达后端正式日志：`http://localhost:8111/log?log=backend`
+- 直达后端正式日志：`http://localhost:5173/logs-ui/log?log=backend`
+- 管理页（文件选择）：`http://localhost:5173/logs-ui/`
+
+> 直连 `http://localhost:8111/logs-ui/` 仅在 WSL 内可用——WSL2 的 localhost 端口转发对服务启动后才新增的端口不生效（重启 WSL 后 8111 直连才会注册）。
 
 支持实时刷新、日志级别过滤、关键字搜索和异常堆栈高亮。服务管理：
 
@@ -213,7 +215,7 @@ systemctl --user status log-viewer      # 查看状态
 systemctl --user restart log-viewer     # 重启
 ```
 
-程序位置 `~/.local/opt/log-viewer/log-viewer-1.0.11/`，配置在同目录 `config.conf`（已配置 `backend` 短路径、只绑定 localhost、关闭统计外发）。
+程序位置 `~/.local/opt/log-viewer/log-viewer-1.0.11/`，配置在同目录 `config.conf`（context-path 为 `/logs-ui`，已配置 `backend` 短路径、只绑定 localhost、关闭统计外发）。
 
 ## 自动部署（systemd timer）
 
