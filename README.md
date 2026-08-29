@@ -183,9 +183,41 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 
 Redis、复杂权限、多用户、多租户、CDN、临时签名 URL 和异常补偿暂不实现。
 
+## 日志
+
+应用日志写入项目根目录的 `logs/`（已被 Git 忽略），文件名按实例端口区分，互不覆盖：
+
+| 文件 | 说明 |
+| --- | --- |
+| `logs/servicehub-8080.log` | systemd 自动启动的正式实例 |
+| `logs/servicehub-<port>.log` | 手动起的其他实例（如测试实例） |
+
+滚动策略：每天归档为 `*.log.<日期>.<序号>.log.gz`，归档保留 **7 天**后自动清理；另有单文件 10MB、总量 200MB 的上限保护。
+
+```bash
+# 实时跟踪正式实例日志
+tail -f logs/servicehub-8080.log
+```
+
+### Web 日志查看器（Log Viewer）
+
+本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），浏览器打开即看：
+
+- 管理页（文件选择）：`http://localhost:8111/`
+- 直达后端正式日志：`http://localhost:8111/log?log=backend`
+
+支持实时刷新、日志级别过滤、关键字搜索和异常堆栈高亮。服务管理：
+
+```bash
+systemctl --user status log-viewer      # 查看状态
+systemctl --user restart log-viewer     # 重启
+```
+
+程序位置 `~/.local/opt/log-viewer/log-viewer-1.0.11/`，配置在同目录 `config.conf`（已配置 `backend` 短路径、只绑定 localhost、关闭统计外发）。
+
 ## 自动部署（systemd timer）
 
-本项目在 WSL 中配置了基于 systemd user timer 的简易 CI/CD：每 2 分钟检查一次 GitHub 上 `main` 分支的最新 commit，若与上次已部署的 commit 不同，则自动重新打包（`mvn -pl servicehub-admin -am package -DskipTests`）并重启 `servicehub-backend` 服务。
+本项目在 WSL 中配置了基于 systemd user timer 的简易 CI/CD：每 2 分钟检查一次 GitHub 上 `main` 分支的最新 commit（fetch 带 60 秒超时，网络挂起不会堵住部署管道），若与上次已部署的 commit 不同，则自动重新打包（`mvn -pl servicehub-admin -am package -DskipTests`）并重启 `servicehub-backend` 服务。
 
 日常开发中**推送到 GitHub 后无需手动重启服务**，最迟约 2 分钟后新代码自动生效（本地提交但未推送不会触发部署）。
 
