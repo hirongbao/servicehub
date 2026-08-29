@@ -36,6 +36,10 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         String username = credentials.resolveUsername(credential);
         if (username != null) {
             request.setAttribute("auth.user", username);
+            String renewed = credentials.renewIfEligible(credential);
+            if (renewed != null) {
+                response.setHeader("X-Renewed-Token", renewed);
+            }
             return true;
         }
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

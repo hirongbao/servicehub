@@ -7,7 +7,12 @@ package com.shirongbao.admin.security;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,5 +64,30 @@ class AdminCredentialServiceTest {
         AdminCredentialService b = new AdminCredentialService("");
         assertNotEquals(a.issue("hirongbao"), b.issue("hirongbao"));
         assertFalse(b.verify(a.issue("hirongbao")));
+    }
+
+    // 剩余有效期不足 20 天时应续期出新凭证
+    @Test
+    void renewalIssuedWhenNearExpiry() {
+        String nearExpiry = service.issue("hirongbao", System.currentTimeMillis() + Duration.ofDays(5).toMillis());
+        String renewed = service.renewIfEligible(nearExpiry);
+        assertNotNull(renewed);
+        assertTrue(service.verify(renewed));
+        assertEquals("hirongbao", service.resolveUsername(renewed));
+    }
+
+    // 剩余有效期充足时不应续期
+    @Test
+    void renewalSkippedWhenFresh() {
+        String fresh = service.issue("hirongbao", System.currentTimeMillis() + Duration.ofDays(25).toMillis());
+        assertNull(service.renewIfEligible(fresh));
+    }
+
+    // 无效凭证不应触发续期
+    @Test
+    void renewalSkippedForInvalidCredential() {
+        assertNull(service.renewIfEligible(null));
+        assertNull(service.renewIfEligible("garbage"));
+        assertNull(service.renewIfEligible(service.issue("hirongbao", System.currentTimeMillis() - 1000)));
     }
 }

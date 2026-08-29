@@ -20,7 +20,9 @@ import java.util.Base64;
 
 @Component
 public class AdminCredentialService {
-    private static final long TTL_MILLIS = Duration.ofDays(7).toMillis();
+    private static final long TTL_MILLIS = Duration.ofDays(30).toMillis();
+    // 剩余有效期低于该阈值时在响应头下发新凭证，实现登录态滑动续期
+    private static final long RENEW_THRESHOLD_MILLIS = Duration.ofDays(20).toMillis();
     private final byte[] secret;
 
     // 初始化签名密钥，未配置时使用进程内随机密钥（重启后凭证失效）
@@ -29,19 +31,24 @@ public class AdminCredentialService {
                 ? randomSecret() : configuredSecret).getBytes(StandardCharsets.UTF_8);
     }
 
-    // 签发管理员登录凭证，有效期 7 天
+    // 签发管理员登录凭证，有效期 30 天
     public String issue(String username) {
         return issue(username, System.currentTimeMillis() + TTL_MILLIS);
     }
 
-    // 校验管理员登录凭证，有效时返回凭证中的用户名
-    public String resolveUsername(String credential) {
-        if (!verify(credential)) {
+    // 凭证剩余有效期不足阈值时签发新凭证实现续期，否则返回 null
+    public String renewIfEligible(String credential) {
+        Parsed parsed = parse(credential);
+        if (parsed == null || parsed.expiresAt() - System.currentTimeMillis() >= RENEW_THRESHOLD_MILLIS) {
             return null;
         }
-        int dot = credential.lastIndexOf('.');
-        String payload = new String(Base64.getUrlDecoder().decode(credential.substring(0, dot)), StandardCharsets.UTF_8);
-        return payload.substring(0, payload.lastIndexOf(':'));
+        return issue(parsed.username());
+    }
+
+    // 校验管理员登录凭证，有效时返回凭证中的用户名
+    public String resolveUsername(String credential) {
+        Parsed parsed = parse(credential);
+        return parsed == null ? null : parsed.username();
     }
 
     // 校验管理员登录凭证是否有效
@@ -76,6 +83,17 @@ public class AdminCredentialService {
         return encoded + "." + sign(payload);
     }
 
+    // 解析并校验凭证，返回用户名与过期时间，无效时返回 null
+    private Parsed parse(String credential) {
+        if (!verify(credential)) {
+            return null;
+        }
+        int dot = credential.lastIndexOf('.');
+        String payload = new String(Base64.getUrlDecoder().decode(credential.substring(0, dot)), StandardCharsets.UTF_8);
+        int colon = payload.lastIndexOf(':');
+        return new Parsed(payload.substring(0, colon), Long.parseLong(payload.substring(colon + 1)));
+    }
+
     // 计算 payload 的 HMAC-SHA256 签名
     private String sign(String payload) {
         try {
@@ -93,5 +111,9 @@ public class AdminCredentialService {
         byte[] bytes = new byte[32];
         new SecureRandom().nextBytes(bytes);
         return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    // 凭证解析结果：用户名与过期时间戳
+    private record Parsed(String username, long expiresAt) {
     }
 }
