@@ -35,6 +35,9 @@ public class FileRecordService {
     // 查询文件记录列表
     public List<FileRecord> list() { return mapper.selectList(null); }
 
+    // 统计文件记录总数
+    public long countAll() { return mapper.selectCount(null); }
+
     // 校验并上传图片文件，内容重复时直接返回已有记录
     public FileRecord upload(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");

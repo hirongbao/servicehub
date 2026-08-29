@@ -60,6 +60,18 @@ public class ShortLinkService {
         return links;
     }
 
+    // 统计启用且未过期的短链数量
+    public long countActive() {
+        return mapper.selectCount(new QueryWrapper<ShortLink>()
+                .eq("status", 1)
+                .and(w -> w.isNull("expires_at").or().gt("expires_at", LocalDateTime.now())));
+    }
+
+    // 统计短链总数
+    public long countAll() {
+        return mapper.selectCount(null);
+    }
+
     // 创建短链，指定别名时校验格式与唯一性
     public ShortLink create(LinkCreateRequest request) {
         String target = request.targetUrl().trim();

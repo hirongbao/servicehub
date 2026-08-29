@@ -53,6 +53,25 @@ public class ServiceTokenService {
         return tokens;
     }
 
+    // 统计启用且未过期的服务 Token 数量
+    public long countActive() {
+        return mapper.selectCount(new QueryWrapper<ServiceToken>()
+                .eq("status", 1)
+                .and(w -> w.isNull("expires_at").or().gt("expires_at", LocalDateTime.now())));
+    }
+
+    // 统计服务 Token 总数
+    public long countAll() {
+        return mapper.selectCount(null);
+    }
+
+    // 按创建时间倒序取最近若干条服务 Token
+    public List<ServiceToken> recent(int limit) {
+        return mapper.selectList(new QueryWrapper<ServiceToken>()
+                .orderByDesc("created_at")
+                .last("LIMIT " + limit));
+    }
+
     // 创建服务 Token，类型必须是已支持的 hub
     public ServiceToken create(TokenCreateRequest request) {
         String type = StringUtils.isBlank(request.tokenType()) ? TokenType.FILEHUB.name() : request.tokenType().toUpperCase();
