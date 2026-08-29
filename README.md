@@ -199,6 +199,14 @@ Redis、复杂权限、多用户、多租户、CDN、临时签名 URL 和异常�
 tail -f logs/servicehub-8080.log
 ```
 
+每个 HTTP 请求会由 `RequestLogInterceptor` 输出一行访问日志，包含方法、接口、状态码、耗时和调用方身份（管理端为登录用户名，开放接口为使用的凭证名称，`-` 表示匿名/未登录）：
+
+```text
+POST /api/admin/login   200 140ms user=-          token=-
+GET  /api/links         200  68ms user=hirongbao  token=-
+GET  /s/mydoc           302  23ms user=-          token=-
+```
+
 ### Web 日志查看器（Log Viewer）
 
 本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），并经 Vite 代理挂在 `/logs-ui` 路径下。浏览器打开即看：
