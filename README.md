@@ -1,19 +1,22 @@
 # ServiceHub Backend
 
-ServiceHub 是面向个人项目的后端基础服务平台。当前版本使用 Java 21、Spring Boot 3.x 的 Maven 单体多模块架构，提供管理员登录、服务 Token（凭证）管理和图片上传能力。
+ServiceHub 是面向个人项目的后端基础服务平台。当前版本使用 Java 21、Spring Boot 3.x 的 Maven 单体多模块架构，提供管理员登录、服务 Token（凭证）管理、图片上传和短链能力。
 
 ## 功能特性
 
-- **管理员认证**：账号密码登录，签发访问凭证。
+- **管理员认证**：账号密码登录，签发 30 天有效的访问凭证；剩余有效期不足 20 天时自动在响应头 `X-Renewed-Token` 下发新凭证实现滑动续期。
 - **凭证管理**：创建、启用/禁用、删除服务 Token，支持自定义有效期。
+- **调用记录**：开放接口的每次 Token 调用都会落库，管理端可分页查看并按服务类型筛选。
 - **图片上传**：仅允许上传 JPG、PNG、GIF、WEBP 图片，单文件最大 10MB，存储到腾讯 COS 并记录文件信息。
 - **内容去重**：上传前按 SHA-256 内容哈希查重，重复图片直接返回已有记录，不再重复存储。
 - **开放文件接口**：第三方服务可使用 FILEHUB 类型 Token 调用图片查询、上传和删除接口。
-- **短链服务（LinkHub）**：长链接转短码跳转，支持自定义短码、有效期和点击统计；第三方服务可使用 LINKHUB 类型 Token 调用创建和查询接口。
+- **短链服务（LinkHub）**：长链接转短码跳转，支持自定义短码和有效期；跳转记录来源（Referer 域名）与设备（桌面/移动/爬虫），统计接口返回总数、按天趋势、来源排行和设备分布；第三方服务可使用 LINKHUB 类型 Token 调用创建和查询接口。
+- **健康检查**：`GET /api/health` 探测服务与数据库连通性。
+- **接口文档**：内置 springdoc Swagger，浏览器打开 `/swagger-ui/index.html` 在线查看和调试。
 
 ## 技术栈
 
-Java 21 · Spring Boot 3.4 · Maven · MyBatis-Plus · MySQL 8 · 腾讯 COS
+Java 21 · Spring Boot 3.4 · Maven · MyBatis-Plus · Flyway · MySQL 8 · 腾讯 COS · springdoc-openapi
 
 ## 模块结构
 
@@ -54,7 +57,7 @@ servicehub
    COS_PUBLIC_URL_ENABLED=true
    ```
 
-3. 启动应用（默认端口 `8080`，时区 `Asia/Shanghai`，启动时自动执行 `schema.sql` 建表）：
+3. 启动应用（默认端口 `8080`，时区 `Asia/Shanghai`，启动时 Flyway 自动执行数据库迁移，见 `servicehub-admin/src/main/resources/db/migration/`）：
 
    ```bash
    mvn -f servicehub-admin/pom.xml spring-boot:run
@@ -143,10 +146,13 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | --- | --- | --- |
 | POST | `/api/admin/login` | 管理员登录，返回 `{ token, username }` |
 | POST | `/api/admin/logout` | 注销 |
+| GET | `/api/overview` | 概览聚合统计 |
+| GET | `/api/health` | 健康检查（无需登录），数据库异常时返回 503 |
 | GET | `/api/tokens` | 查询凭证列表 |
 | POST | `/api/tokens` | 创建凭证，参数 `{ tokenName, tokenType, validDays }` |
 | POST | `/api/tokens/{id}/status` | 启用/禁用凭证，参数 `{ status: 0 \| 1 }` |
 | DELETE | `/api/tokens/{id}` | 删除凭证 |
+| GET | `/api/usage` | 分页查询 Token 调用记录，参数 `hub`（all/FILEHUB/LINKHUB）、`page`、`size` |
 | GET | `/api/files` | 查询文件列表 |
 | POST | `/api/files/upload` | 上传图片，`multipart` 字段名 `file` |
 | DELETE | `/api/files/{id}` | 删除文件（同时删除 COS 对象） |
@@ -154,7 +160,7 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | POST | `/api/links` | 创建短链，参数 `{ targetUrl, code?, remark?, validDays? }` |
 | POST | `/api/links/{id}/status` | 启用/禁用短链，参数 `{ status: 0 \| 1 }` |
 | DELETE | `/api/links/{id}` | 删除短链及访问记录 |
-| GET | `/api/links/{id}/stats` | 查询短链点击统计（总数 + 近 30 天按天） |
+| GET | `/api/links/{id}/stats` | 查询短链点击统计：`total` 总数、`daily` 近 30 天按天、`sources` 来源排行、`devices` 设备分布 |
 
 ### 开放文件接口（FILEHUB Token 鉴权）
 
@@ -182,6 +188,27 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 ## v1 边界
 
 Redis、复杂权限、多用户、多租户、CDN、临时签名 URL 和异常补偿暂不实现。
+
+## 数据库迁移（Flyway）
+
+表结构由 Flyway 版本化脚本管理，位于 `servicehub-admin/src/main/resources/db/migration/`：
+
+| 版本 | 内容 |
+| --- | --- |
+| V1 | 初始五张表（service_token、file_record、token_usage_log、short_link、link_visit_log） |
+| V2 | file_record 补充 content_hash 列与唯一索引 |
+| V3 | link_visit_log 补充 referer、user_agent 列 |
+
+存量库首次启动时自动打基线（baseline-version=2），跳过 V1/V2 只应用之后的增量脚本；全新库从 V1 开始完整执行。新增表结构变更时，添加 `V<N>__描述.sql` 脚本即可，不要改动已发布的历史脚本。
+
+## MySQL 备份（systemd timer）
+
+本项目在 WSL 中配置了每日自动备份：`~/projects/mysql-backup.sh` 通过 `docker exec` 调用容器内 `mysqldump`（`--single-transaction` 一致性快照、不锁表），gzip 压缩后写入 `~/backups/servicehub/`，文件权限 600，保留最近 14 份。
+
+- 定时器：`~/.config/systemd/user/servicehub-backup.timer`，每天 03:30 执行（随 WSL 开机自启，Persistent 补偿错过的触发）
+- 手动执行一次备份：`systemctl --user start servicehub-backup.service`
+- 查看备份日志：`journalctl --user -u servicehub-backup -f`
+- 恢复数据：`zcat ~/backups/servicehub/servicehub-<时间>.sql.gz | docker exec -i servicehub-mysql mysql -uroot -p"密码" servicehub`
 
 ## 日志
 
