@@ -16,10 +16,13 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  sql:
-    init:
-      mode: always
-      encoding: UTF-8
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    encoding: UTF-8
+    # 存量库已有全部表结构：首启时打基线到 2（V1/V2 不再执行），只应用之后的增量迁移
+    baseline-on-migrate: true
+    baseline-version: 2
 server:
   port: 8080
 
