@@ -90,6 +90,12 @@ public class ServiceTokenService {
         if (request.validDays() != null && request.validDays() > 0) {
             token.setExpiresAt(LocalDateTime.now().plusDays(request.validDays()));
         }
+        if (request.maxUses() != null && request.maxUses() > 0) {
+            if (request.maxUses() > 100_000_000) {
+                throw new IllegalArgumentException("使用额度上限不能超过 100000000");
+            }
+            token.setMaxUses(request.maxUses());
+        }
         mapper.insert(token);
         return token;
     }
@@ -112,7 +118,7 @@ public class ServiceTokenService {
         }
     }
 
-    // 校验并返回指定 hub 的有效服务 Token
+    // 校验并返回指定 hub 的有效服务 Token，使用额度超限时同样拒绝
     public ServiceToken requireActive(String tokenValue, String hub) {
         if (StringUtils.isBlank(tokenValue)) {
             throw new IllegalArgumentException("Token 无效、已禁用或已过期");
@@ -121,6 +127,12 @@ public class ServiceTokenService {
         if (token == null || token.getStatus() != 1 || !hub.equals(token.getTokenType())
                 || (token.getExpiresAt() != null && !token.getExpiresAt().isAfter(LocalDateTime.now()))) {
             throw new IllegalArgumentException("Token 无效、已禁用或已过期");
+        }
+        if (token.getMaxUses() != null && token.getMaxUses() > 0) {
+            Long used = usageLogMapper.selectCount(new QueryWrapper<TokenUsageLog>().eq("token_id", token.getId()));
+            if (used != null && used >= token.getMaxUses()) {
+                throw new IllegalArgumentException("Token 使用额度已用完（" + used + "/" + token.getMaxUses() + "），请调整额度或更换凭证");
+            }
         }
         return token;
     }

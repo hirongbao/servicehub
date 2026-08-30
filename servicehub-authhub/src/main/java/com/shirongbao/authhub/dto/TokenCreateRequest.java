@@ -7,5 +7,5 @@ package com.shirongbao.authhub.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record TokenCreateRequest(@NotBlank(message = "Token 名称不能为空") String tokenName, String tokenType, Integer validDays) {
+public record TokenCreateRequest(@NotBlank(message = "Token 名称不能为空") String tokenName, String tokenType, Integer validDays, Integer maxUses) {
 }

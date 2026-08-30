@@ -21,6 +21,7 @@ public class ServiceToken {
     private String tokenName;
     private String tokenValue;
     private String tokenType;
+    private Integer maxUses;
     private Integer status;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
