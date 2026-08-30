@@ -6,6 +6,7 @@ ServiceHub 是面向个人项目的后端基础服务平台。当前版本使用
 
 - **管理员认证**：账号密码登录，签发 30 天有效的访问凭证；剩余有效期不足 20 天时自动在响应头 `X-Renewed-Token` 下发新凭证实现滑动续期。
 - **凭证管理**：创建、启用/禁用、删除服务 Token，支持自定义有效期。
+- **使用额度**：创建凭证时可设置调用次数上限，开放接口在额度用完后拒绝调用并提示。
 - **调用记录**：开放接口的每次 Token 调用都会落库，管理端可分页查看并按服务类型筛选。
 - **图片上传**：仅允许上传 JPG、PNG、GIF、WEBP 图片，单文件最大 10MB，存储到腾讯 COS 并记录文件信息。
 - **内容去重**：上传前按 SHA-256 内容哈希查重，重复图片直接返回已有记录，不再重复存储。
@@ -29,7 +30,7 @@ servicehub
 └── servicehub-admin     # 管理后台 API 和应用启动模块
 ```
 
-依赖方向为 `admin → authhub → common`、`filehub → authhub → common`。
+依赖方向为 `admin → filehub / linkhub → authhub → common`。
 
 ## 本地开发
 
@@ -50,6 +51,7 @@ servicehub
    DB_PASSWORD=你的MySQL密码
    SERVICEHUB_ADMIN_USERNAME=hirongbao
    SERVICEHUB_ADMIN_PASSWORD=你的管理后台密码
+   SERVICEHUB_AUTH_SECRET=任意足够长的随机字符串（推荐配置，否则每次重启后所有登录凭证失效）
    COS_SECRET_ID=你的腾讯云SecretId
    COS_SECRET_KEY=你的腾讯云SecretKey
    COS_REGION=ap-shanghai
@@ -149,7 +151,7 @@ MySQL 使用 Docker 容器运行即可，无需在 WSL 主机安装 MySQL。
 | GET | `/api/overview` | 概览聚合统计 |
 | GET | `/api/health` | 健康检查（无需登录），数据库异常时返回 503 |
 | GET | `/api/tokens` | 查询凭证列表 |
-| POST | `/api/tokens` | 创建凭证，参数 `{ tokenName, tokenType, validDays }` |
+| POST | `/api/tokens` | 创建凭证，参数 `{ tokenName, tokenType, validDays, maxUses? }`，`maxUses` 为调用次数上限（0 或不传表示不限制） |
 | POST | `/api/tokens/{id}/status` | 启用/禁用凭证，参数 `{ status: 0 \| 1 }` |
 | DELETE | `/api/tokens/{id}` | 删除凭证 |
 | GET | `/api/usage` | 分页查询 Token 调用记录，参数 `hub`（all/FILEHUB/LINKHUB）、`page`、`size` |
@@ -236,10 +238,10 @@ GET  /s/mydoc           302  23ms user=-          token=-
 
 ### Web 日志查看器（Log Viewer）
 
-本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），并经 Vite 代理挂在 `/logs-ui` 路径下。浏览器打开即看：
+本机 8111 端口常驻了一个 [log-viewer](https://github.com/sevdokimov/log-viewer)（systemd 用户服务 `log-viewer`），并由前端本地服务器（`server.js`）代理挂在 `/logs-ui` 路径下。浏览器打开即看：
 
-- 直达后端正式日志：`http://localhost:5173/logs-ui/log?log=backend`
-- 管理页（文件选择）：`http://localhost:5173/logs-ui/`
+- 直达后端正式日志：`http://localhost:3000/logs-ui/log?log=backend`
+- 管理页（文件选择）：`http://localhost:3000/logs-ui/`
 
 > 直连 `http://localhost:8111/logs-ui/` 仅在 WSL 内可用——WSL2 的 localhost 端口转发对服务启动后才新增的端口不生效（重启 WSL 后 8111 直连才会注册）。
 
