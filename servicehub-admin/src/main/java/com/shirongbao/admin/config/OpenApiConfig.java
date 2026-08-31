@@ -21,8 +21,8 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("ServiceHub API")
-                        .description("个人项目基础服务平台：管理端、开放文件接口（FILEHUB）与开放短链接口（LINKHUB）。"
-                                + "管理端接口使用登录时返回的 Bearer 凭证，开放接口使用 X-Service-Token 请求头携带对应类型的 Token。")
+                        .description("个人项目基础服务平台：管理端、开放文件接口（FILEHUB）、开放短链接口（LINKHUB）与个人网站公开接口（HIRONGBAOHUB）。"
+                                + "管理端接口使用登录时返回的 Bearer 凭证，开放接口使用 X-Service-Token 请求头携带对应类型的 Token，个人网站公开接口无需凭证。")
                         .version("v1"))
                 .components(new Components()
                         .addSecuritySchemes("AdminToken", new SecurityScheme()
