@@ -20,12 +20,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
         this.adminAuthInterceptor = adminAuthInterceptor;
     }
 
-    // 注册请求日志和管理端鉴权拦截器，放行登录、健康检查、开放文件、开放短链和个人网站公开接口（Swagger 文档路径不在 /api/** 内，无需放行）
+    // 注册请求日志和管理端鉴权拦截器，放行登录、健康检查、开放文件、开放短链和个人网站公开接口（个人网站管理接口在 /api/site/** 下受保护）
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(requestLogInterceptor).addPathPatterns("/**");
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/admin/login", "/api/health", "/api/filehub/**", "/api/linkhub/**", "/api/hirongbaohub/**");
+                .excludePathPatterns("/api/admin/login", "/api/health", "/api/filehub/**", "/api/linkhub/**", "/api/hirongbaohub/profile");
     }
 }

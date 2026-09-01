@@ -7,6 +7,8 @@ package com.shirongbao.hirongbaohub.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
+import com.shirongbao.hirongbaohub.dto.ProfileUpdateRequest;
+import com.shirongbao.hirongbaohub.dto.SocialUpsertRequest;
 import com.shirongbao.hirongbaohub.entity.SiteProfile;
 import com.shirongbao.hirongbaohub.entity.SiteSocial;
 import com.shirongbao.hirongbaohub.mapper.SiteProfileMapper;
@@ -46,5 +48,87 @@ public class SiteProfileService {
                 profile.getStatPosts(), profile.getStatFollowers(), profile.getStatFollowing());
         return new ProfileResponse(profile.getName(), profile.getHandle(), profile.getBio(),
                 profile.getAvatarUrl(), items, stats);
+    }
+
+    // 查询站点资料与全部社媒名片（管理端，含已禁用）
+    public SiteProfile adminProfile() {
+        SiteProfile profile = profileMapper.selectOne(new LambdaQueryWrapper<SiteProfile>()
+                .orderByAsc(SiteProfile::getId)
+                .last("LIMIT 1"));
+        if (profile == null) {
+            throw new IllegalArgumentException("站点资料尚未配置");
+        }
+        return profile;
+    }
+
+    // 查询全部社媒名片（管理端，按排序值与 id 升序）
+    public List<SiteSocial> adminSocials() {
+        return socialMapper.selectList(new LambdaQueryWrapper<SiteSocial>()
+                .orderByAsc(SiteSocial::getSortOrder)
+                .orderByAsc(SiteSocial::getId));
+    }
+
+    // 更新站点资料
+    public SiteProfile updateProfile(ProfileUpdateRequest request) {
+        SiteProfile profile = adminProfile();
+        profile.setName(request.name().trim());
+        profile.setHandle(request.handle().trim());
+        profile.setBio(trimToNull(request.bio()));
+        profile.setAvatarUrl(trimToNull(request.avatarUrl()));
+        profile.setStatPosts(request.statPosts() == null ? 0 : Math.max(request.statPosts(), 0));
+        profile.setStatFollowers(request.statFollowers() == null ? 0 : Math.max(request.statFollowers(), 0));
+        profile.setStatFollowing(request.statFollowing() == null ? 0 : Math.max(request.statFollowing(), 0));
+        profileMapper.updateById(profile);
+        return profile;
+    }
+
+    // 新增社媒名片
+    public SiteSocial createSocial(SocialUpsertRequest request) {
+        SiteSocial social = new SiteSocial();
+        applySocial(social, request);
+        if (social.getStatus() == null) {
+            social.setStatus(1);
+        }
+        socialMapper.insert(social);
+        return social;
+    }
+
+    // 更新社媒名片
+    public SiteSocial updateSocial(Long id, SocialUpsertRequest request) {
+        SiteSocial social = socialMapper.selectById(id);
+        if (social == null) {
+            throw new IllegalArgumentException("社媒名片不存在");
+        }
+        applySocial(social, request);
+        socialMapper.updateById(social);
+        return social;
+    }
+
+    // 删除社媒名片
+    public void deleteSocial(Long id) {
+        socialMapper.deleteById(id);
+    }
+
+    // 填充社媒名片字段并校验二维码与链接至少其一
+    private void applySocial(SiteSocial social, SocialUpsertRequest request) {
+        String url = trimToNull(request.url());
+        String qrCodeUrl = trimToNull(request.qrCodeUrl());
+        if (url == null && qrCodeUrl == null) {
+            throw new IllegalArgumentException("跳转链接和二维码图片至少填写一个");
+        }
+        social.setPlatform(request.platform().trim());
+        social.setIconName(request.iconName().trim());
+        social.setUrl(url);
+        social.setQrCodeUrl(qrCodeUrl);
+        social.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
+        social.setStatus(request.status() != null && request.status() == 1 ? 1 : 0);
+    }
+
+    // 字符串去空格，空白转为 null
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }
