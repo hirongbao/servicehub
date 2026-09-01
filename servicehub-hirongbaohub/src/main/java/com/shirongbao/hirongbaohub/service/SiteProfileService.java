@@ -68,16 +68,13 @@ public class SiteProfileService {
                 .orderByAsc(SiteSocial::getId));
     }
 
-    // 更新站点资料
+    // 更新站点资料（统计数字不开放编辑，保留库中现值）
     public SiteProfile updateProfile(ProfileUpdateRequest request) {
         SiteProfile profile = adminProfile();
         profile.setName(request.name().trim());
         profile.setHandle(request.handle().trim());
         profile.setBio(trimToNull(request.bio()));
         profile.setAvatarUrl(trimToNull(request.avatarUrl()));
-        profile.setStatPosts(request.statPosts() == null ? 0 : Math.max(request.statPosts(), 0));
-        profile.setStatFollowers(request.statFollowers() == null ? 0 : Math.max(request.statFollowers(), 0));
-        profile.setStatFollowing(request.statFollowing() == null ? 0 : Math.max(request.statFollowing(), 0));
         profileMapper.updateById(profile);
         return profile;
     }
