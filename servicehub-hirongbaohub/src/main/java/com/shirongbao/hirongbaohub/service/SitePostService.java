@@ -6,7 +6,9 @@
 package com.shirongbao.hirongbaohub.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.dto.PostUpsertRequest;
+import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SitePostMedia;
 import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
@@ -14,6 +16,7 @@ import com.shirongbao.hirongbaohub.mapper.SitePostMediaMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,11 +29,13 @@ public class SitePostService {
 
     private final SitePostMapper mapper;
     private final SitePostMediaMapper mediaMapper;
+    private final SiteCommentService commentService;
 
     // 初始化动态业务服务
-    public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper) {
+    public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
+        this.commentService = commentService;
     }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
@@ -40,6 +45,37 @@ public class SitePostService {
                 .orderByDesc(SitePost::getId));
         fillMedia(posts);
         return posts;
+    }
+
+    // 查询已发布动态及媒体、评论（个人网站公开接口）
+    public List<SitePost> publishedList() {
+        List<SitePost> posts = mapper.selectList(new LambdaQueryWrapper<SitePost>()
+                .eq(SitePost::getStatus, 1)
+                .orderByDesc(SitePost::getCreatedAt)
+                .orderByDesc(SitePost::getId));
+        fillMedia(posts);
+        Map<Long, List<SiteComment>> grouped = new HashMap<>();
+        commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
+        for (SitePost post : posts) {
+            post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+        }
+        return posts;
+    }
+
+    // 点赞或取消点赞，返回最新点赞数
+    public int like(Long id, String action) {
+        SitePost post = require(id);
+        int current = post.getLikeCount() == null ? 0 : post.getLikeCount();
+        int next = "unlike".equals(action) ? Math.max(current - 1, 0) : current + 1;
+        post.setLikeCount(next);
+        mapper.updateById(post);
+        return next;
+    }
+
+    // 校验动态存在后发表访客评论
+    public SiteComment addComment(Long id, CommentCreateRequest request) {
+        require(id);
+        return commentService.add(id, request);
     }
 
     // 发布动态
