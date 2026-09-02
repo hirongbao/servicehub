@@ -9,6 +9,7 @@ import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.dto.LikeRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
+import com.shirongbao.hirongbaohub.dto.PostPageResponse;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.service.SitePostService;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,14 @@ public class HirongbaoHubController {
         return ApiResponse.success(sitePostService.publishedList(category));
     }
 
+    // 分页查询已发布动态
+    @GetMapping("/posts/page")
+    public ApiResponse<PostPageResponse> postPage(@RequestParam(required = false) String category,
+                                                   @RequestParam(defaultValue = "1") int page,
+                                                   @RequestParam(defaultValue = "12") int size) {
+        return ApiResponse.success(sitePostService.publishedPage(category, page, size));
+    }
+
     // 点赞或取消点赞
     @PostMapping("/posts/{id}/like")
     public ApiResponse<Map<String, Object>> like(@PathVariable Long id, @Valid @RequestBody LikeRequest request) {
@@ -66,8 +76,16 @@ public class HirongbaoHubController {
 
     // 刷新访客心跳并返回当前在线人数
     @PostMapping("/heartbeat")
-    public ApiResponse<Map<String, Object>> heartbeat(@Valid @RequestBody HeartbeatRequest request) {
-        return ApiResponse.success(Map.of("onlineCount", sitePostService.heartbeat(request.clientId())));
+    public ApiResponse<Map<String, Object>> heartbeat(@Valid @RequestBody HeartbeatRequest request, HttpServletRequest httpRequest) {
+        return ApiResponse.success(sitePostService.heartbeat(request.clientId(), resolveClientIp(httpRequest)));
+    }
+
+    // 读取反向代理后的真实客户端地址
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
+        String real = request.getHeader("X-Real-IP");
+        return real == null || real.isBlank() ? request.getRemoteAddr() : real;
     }
 
     // 心跳请求参数

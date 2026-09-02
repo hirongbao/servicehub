@@ -6,11 +6,13 @@
 package com.shirongbao.hirongbaohub.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.dto.PostUpsertRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SitePostMedia;
+import com.shirongbao.hirongbaohub.entity.SiteVisitor;
 import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
 import com.shirongbao.hirongbaohub.mapper.SitePostMediaMapper;
 import org.springframework.stereotype.Service;
@@ -28,17 +30,21 @@ public class SitePostService {
     private static final Set<String> MEDIA_TYPES = Set.of("image", "video");
     private static final int MAX_IMAGES = 9;
     private static final long HEARTBEAT_TTL_MILLIS = 60_000L;
+    private static final long VISIT_DEDUP_MILLIS = 1_800_000L;
 
     private final SitePostMapper mapper;
     private final SitePostMediaMapper mediaMapper;
     private final SiteCommentService commentService;
+    private final com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper;
     private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
 
     // 初始化动态业务服务
-    public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService) {
+    public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService,
+                           com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
         this.commentService = commentService;
+        this.visitorMapper = visitorMapper;
     }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
@@ -70,12 +76,82 @@ public class SitePostService {
         return posts;
     }
 
+    // 查询已发布动态分页数据
+    public com.shirongbao.hirongbaohub.dto.PostPageResponse publishedPage(String category, int page, int size) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), 30);
+        LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
+                .eq(SitePost::getStatus, 1)
+                .orderByDesc(SitePost::getCreatedAt)
+                .orderByDesc(SitePost::getId);
+        if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
+            query.eq(SitePost::getCategoryId, category.trim());
+        }
+        Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
+        List<SitePost> posts = result.getRecords();
+        fillMedia(posts);
+        Map<Long, List<SiteComment>> grouped = new HashMap<>();
+        commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
+        for (SitePost post : posts) {
+            post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+            post.setCategory(toCategory(post));
+        }
+        return new com.shirongbao.hirongbaohub.dto.PostPageResponse(posts, safePage, safeSize,
+                result.getTotal(), result.getCurrent() < result.getPages());
+    }
+
     // 记录访客心跳并统计最近一分钟内的独立客户端
-    public int heartbeat(String clientId) {
+    public Map<String, Object> heartbeat(String clientId, String remoteAddress) {
         long now = System.currentTimeMillis();
         heartbeats.put(clientId.trim(), now);
         heartbeats.entrySet().removeIf(entry -> now - entry.getValue() > HEARTBEAT_TTL_MILLIS);
-        return heartbeats.size();
+        recordVisit(remoteAddress);
+        int actual = heartbeats.size();
+        long totalVisitors = visitorMapper.selectCount(null);
+        int display = displayOnlineCount(actual, totalVisitors);
+        return Map.of("onlineCount", display, "actualOnlineCount", actual, "totalVisitors", totalVisitors);
+    }
+
+    // 记录独立访客并对短时间内重复访问去重
+    private void recordVisit(String remoteAddress) {
+        String key = sha256(remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        SiteVisitor visitor = visitorMapper.selectById(key);
+        if (visitor == null) {
+            visitor = new SiteVisitor();
+            visitor.setVisitorKey(key);
+            visitor.setFirstSeen(now);
+            visitor.setLastSeen(now);
+            visitor.setLastVisitAt(now);
+            visitor.setVisitCount(1);
+            visitorMapper.insert(visitor);
+            return;
+        }
+        visitor.setLastSeen(now);
+        if (visitor.getLastVisitAt() == null || java.time.Duration.between(visitor.getLastVisitAt(), now).toMillis() >= VISIT_DEDUP_MILLIS) {
+            visitor.setLastVisitAt(now);
+            visitor.setVisitCount((visitor.getVisitCount() == null ? 0 : visitor.getVisitCount()) + 1);
+        }
+        visitorMapper.updateById(visitor);
+    }
+
+    // 根据实际在线数与历史访客数计算展示在线数
+    private int displayOnlineCount(int actual, long totalVisitors) {
+        if (actual >= 8 || totalVisitors == 0) return actual;
+        int gentleBaseline = Math.max(3, (int) Math.ceil(Math.sqrt(totalVisitors)));
+        return Math.max(actual, Math.min(actual + 5, gentleBaseline));
+    }
+
+    // 对访客地址做不可逆摘要，避免持久化原始 IP
+    private String sha256(String value) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder();
+            for (byte item : digest) result.append(String.format("%02x", item));
+            return result.toString();
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 不可用", exception);
+        }
     }
 
     // 点赞或取消点赞，返回最新点赞数
