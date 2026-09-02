@@ -31,11 +31,7 @@ jobs:
       - name: Build backend
         run: mvn -pl servicehub-admin -am clean package -DskipTests
 
-      - name: Prepare deployment artifact
-        if: github.event_name == 'push'
-        run: cp servicehub-admin/target/servicehub-admin-*.jar /tmp/servicehub-admin.jar
-
-      - name: Upload JAR over SSH
+      - name: Trigger server deployment
         if: github.event_name == 'push'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -46,33 +42,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_deploy
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-          timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+          timeout 300 ssh -o BatchMode=yes -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
             -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" \
-            'cat > /tmp/servicehub-admin.jar' < /tmp/servicehub-admin.jar
-
-      - name: Activate release and verify health
-        if: github.event_name == 'push'
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-        run: |
-          timeout 180 ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-            -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          release="/opt/apps/servicehub/releases/$(date +%Y%m%d%H%M%S)"
-          mkdir -p "$release"
-          test -s /tmp/servicehub-admin.jar
-          cp /tmp/servicehub-admin.jar "$release/servicehub-admin.jar"
-          ln -sfn "$release" /opt/apps/servicehub/current
-          systemctl --user restart servicehub-backend.service
-          for i in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
-              rm -f /tmp/servicehub-admin.jar
-              exit 0
-            fi
-            sleep 2
-          done
-          systemctl --user status servicehub-backend.service --no-pager || true
-          journalctl --user -u servicehub-backend.service -n 80 --no-pager || true
-          exit 1
-          REMOTE
+            '/opt/scripts/deploy-servicehub-backend.sh'
