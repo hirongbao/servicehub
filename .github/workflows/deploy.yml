@@ -1,0 +1,73 @@
+name: ServiceHub Backend CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build backend
+        run: mvn -pl servicehub-admin -am clean package -DskipTests
+
+      - name: Prepare deployment archive
+        if: github.event_name == 'push'
+        run: tar -czf servicehub-backend.tar.gz servicehub-admin/target/servicehub-admin-*.jar
+
+      - name: Upload archive
+        if: github.event_name == 'push'
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_deploy
+          chmod 600 ~/.ssh/servicehub_deploy
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/servicehub_deploy servicehub-backend.tar.gz "$SERVER_USER@$SERVER_HOST:/tmp/servicehub-backend.tar.gz"
+
+      - name: Activate release and verify health
+        if: github.event_name == 'push'
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          release="/opt/apps/servicehub/releases/$(date +%Y%m%d%H%M%S)"
+          mkdir -p "$release"
+          tar -xzf /tmp/servicehub-backend.tar.gz -C "$release"
+          jar_path=$(find "$release/servicehub-admin/target" -maxdepth 1 -type f -name 'servicehub-admin-*.jar' ! -name '*-plain.jar' | head -n 1)
+          test -n "$jar_path"
+          cp "$jar_path" "$release/servicehub-admin.jar"
+          ln -sfn "$release" /opt/apps/servicehub/current
+          systemctl --user restart servicehub-backend.service
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
+              rm -f /tmp/servicehub-backend.tar.gz
+              exit 0
+            fi
+            sleep 2
+          done
+          systemctl --user status servicehub-backend.service --no-pager || true
+          journalctl --user -u servicehub-backend.service -n 80 --no-pager || true
+          exit 1
+          REMOTE
