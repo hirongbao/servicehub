@@ -44,6 +44,11 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String ip = resolveClientIp(request);
+        // 本机回环地址用于 Nginx、健康检查和服务间调用，不参与公网限流
+        if (isTrustedLocalIp(ip)) {
+            chain.doFilter(request, response);
+            return;
+        }
         if (isBanned(ip)) {
             writeBlocked(response, "该 IP 地址已被永久封禁");
             return;
@@ -59,6 +64,11 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
             return;
         }
         chain.doFilter(request, response);
+    }
+
+    // 判断是否为本机回环地址
+    private boolean isTrustedLocalIp(String ip) {
+        return "127.0.0.1".equals(ip) || "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
     }
 
     // 提取经过 Nginx 转发后的真实客户端 IP
