@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: servicehub-backend-deploy
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -31,7 +35,7 @@ jobs:
         if: github.event_name == 'push'
         run: cp servicehub-admin/target/servicehub-admin-*.jar /tmp/servicehub-admin.jar
 
-      - name: Upload JAR
+      - name: Upload JAR over SSH
         if: github.event_name == 'push'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -42,9 +46,9 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_deploy
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-          timeout 120 scp -O -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-            -i ~/.ssh/servicehub_deploy /tmp/servicehub-admin.jar \
-            "$SERVER_USER@$SERVER_HOST:/tmp/servicehub-admin.jar"
+          timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" \
+            'cat > /tmp/servicehub-admin.jar' < /tmp/servicehub-admin.jar
 
       - name: Activate release and verify health
         if: github.event_name == 'push'
