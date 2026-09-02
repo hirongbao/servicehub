@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -44,8 +45,8 @@ public class HirongbaoHubController {
 
     // 查询已发布动态（含媒体与评论）
     @GetMapping("/posts")
-    public ApiResponse<List<SitePost>> posts() {
-        return ApiResponse.success(sitePostService.publishedList());
+    public ApiResponse<List<SitePost>> posts(@RequestParam(required = false) String category) {
+        return ApiResponse.success(sitePostService.publishedList(category));
     }
 
     // 点赞或取消点赞
@@ -61,5 +62,15 @@ public class HirongbaoHubController {
     @PostMapping("/posts/{id}/comments")
     public ApiResponse<SiteComment> comment(@PathVariable Long id, @Valid @RequestBody CommentCreateRequest request) {
         return ApiResponse.success(sitePostService.addComment(id, request));
+    }
+
+    // 刷新访客心跳并返回当前在线人数
+    @PostMapping("/heartbeat")
+    public ApiResponse<Map<String, Object>> heartbeat(@Valid @RequestBody HeartbeatRequest request) {
+        return ApiResponse.success(Map.of("onlineCount", sitePostService.heartbeat(request.clientId())));
+    }
+
+    // 心跳请求参数
+    public record HeartbeatRequest(@jakarta.validation.constraints.NotBlank(message = "clientId 不能为空") String clientId) {
     }
 }

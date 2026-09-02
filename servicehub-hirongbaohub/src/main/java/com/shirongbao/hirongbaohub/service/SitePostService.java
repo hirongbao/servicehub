@@ -20,16 +20,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
 public class SitePostService {
     private static final Set<String> MEDIA_TYPES = Set.of("image", "video");
     private static final int MAX_IMAGES = 9;
+    private static final long HEARTBEAT_TTL_MILLIS = 60_000L;
 
     private final SitePostMapper mapper;
     private final SitePostMediaMapper mediaMapper;
     private final SiteCommentService commentService;
+    private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
 
     // 初始化动态业务服务
     public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService) {
@@ -48,18 +51,31 @@ public class SitePostService {
     }
 
     // 查询已发布动态及媒体、评论（个人网站公开接口）
-    public List<SitePost> publishedList() {
-        List<SitePost> posts = mapper.selectList(new LambdaQueryWrapper<SitePost>()
+    public List<SitePost> publishedList(String category) {
+        LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
                 .orderByDesc(SitePost::getCreatedAt)
-                .orderByDesc(SitePost::getId));
+                .orderByDesc(SitePost::getId);
+        if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
+            query.eq(SitePost::getCategoryId, category.trim());
+        }
+        List<SitePost> posts = mapper.selectList(query);
         fillMedia(posts);
         Map<Long, List<SiteComment>> grouped = new HashMap<>();
         commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
         for (SitePost post : posts) {
             post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+            post.setCategory(toCategory(post));
         }
         return posts;
+    }
+
+    // 记录访客心跳并统计最近一分钟内的独立客户端
+    public int heartbeat(String clientId) {
+        long now = System.currentTimeMillis();
+        heartbeats.put(clientId.trim(), now);
+        heartbeats.entrySet().removeIf(entry -> now - entry.getValue() > HEARTBEAT_TTL_MILLIS);
+        return heartbeats.size();
     }
 
     // 点赞或取消点赞，返回最新点赞数
@@ -91,6 +107,7 @@ public class SitePostService {
         post.setContent(content);
         post.setLikeCount(0);
         post.setStatus(1);
+        applyCategory(post, request.categoryId(), request.categoryName());
         mapper.insert(post);
         insertMedia(post.getId(), mediaType, urls);
         post.setMedia(mediaMapper.selectList(new LambdaQueryWrapper<SitePostMedia>()
@@ -110,6 +127,7 @@ public class SitePostService {
             throw new IllegalArgumentException("动态内容和媒体至少要有一个");
         }
         post.setContent(content);
+        applyCategory(post, request.categoryId(), request.categoryName());
         mapper.updateById(post);
         mediaMapper.delete(new LambdaQueryWrapper<SitePostMedia>()
                 .eq(SitePostMedia::getPostId, post.getId()));
@@ -215,5 +233,37 @@ public class SitePostService {
             throw new IllegalArgumentException("动态不存在或已删除");
         }
         return post;
+    }
+
+    // 将分类字段转换为公开接口对象
+    private SitePost.Category toCategory(SitePost post) {
+        String id = post.getCategoryId();
+        String name = post.getCategoryName();
+        if (id == null || id.isBlank()) {
+            id = "notes";
+        }
+        if (name == null || name.isBlank()) {
+            name = categoryName(id);
+        }
+        return new SitePost.Category(id, name);
+    }
+
+    // 写入分类标识与展示名称
+    private void applyCategory(SitePost post, String categoryId, String categoryName) {
+        String id = trimToNull(categoryId);
+        if (id == null || "all".equalsIgnoreCase(id)) {
+            id = "notes";
+        }
+        post.setCategoryId(id);
+        post.setCategoryName(trimToNull(categoryName) == null ? categoryName(id) : categoryName.trim());
+    }
+
+    // 返回内置分类名称
+    private String categoryName(String categoryId) {
+        return switch (categoryId) {
+            case "food" -> "美食";
+            case "scenery" -> "风景";
+            default -> "随笔";
+        };
     }
 }

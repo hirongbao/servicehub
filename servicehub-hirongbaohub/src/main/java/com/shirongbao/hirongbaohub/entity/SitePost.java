@@ -22,6 +22,8 @@ public class SitePost {
     private String content;
     private Integer likeCount;
     private Integer status;
+    private String categoryId;
+    private String categoryName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -30,4 +32,11 @@ public class SitePost {
 
     @TableField(exist = false)
     private List<SiteComment> comments;
+
+    @TableField(exist = false)
+    private Category category;
+
+    // 动态分类返回对象
+    public record Category(String id, String name) {
+    }
 }

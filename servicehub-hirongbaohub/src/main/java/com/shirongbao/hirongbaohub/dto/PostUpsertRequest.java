@@ -11,5 +11,7 @@ import java.util.List;
 
 public record PostUpsertRequest(@Size(max = 2000, message = "动态内容不能超过 2000 字") String content,
                                 String mediaType,
-                                List<@Size(max = 1024, message = "媒体链接过长") String> mediaUrls) {
+                                List<@Size(max = 1024, message = "媒体链接过长") String> mediaUrls,
+                                String categoryId,
+                                @Size(max = 50, message = "分类名称过长") String categoryName) {
 }
