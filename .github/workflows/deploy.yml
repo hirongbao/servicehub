@@ -27,11 +27,11 @@ jobs:
       - name: Build backend
         run: mvn -pl servicehub-admin -am clean package -DskipTests
 
-      - name: Prepare deployment archive
+      - name: Prepare deployment artifact
         if: github.event_name == 'push'
-        run: tar -czf servicehub-backend.tar.gz servicehub-admin/target/servicehub-admin-*.jar
+        run: cp servicehub-admin/target/servicehub-admin-*.jar /tmp/servicehub-admin.jar
 
-      - name: Upload archive
+      - name: Upload JAR
         if: github.event_name == 'push'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -42,7 +42,9 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_deploy
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-          scp -i ~/.ssh/servicehub_deploy servicehub-backend.tar.gz "$SERVER_USER@$SERVER_HOST:/tmp/servicehub-backend.tar.gz"
+          scp -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/servicehub_deploy /tmp/servicehub-admin.jar \
+            "$SERVER_USER@$SERVER_HOST:/tmp/servicehub-admin.jar"
 
       - name: Activate release and verify health
         if: github.event_name == 'push'
@@ -54,15 +56,13 @@ jobs:
           set -euo pipefail
           release="/opt/apps/servicehub/releases/$(date +%Y%m%d%H%M%S)"
           mkdir -p "$release"
-          tar -xzf /tmp/servicehub-backend.tar.gz -C "$release"
-          jar_path=$(find "$release/servicehub-admin/target" -maxdepth 1 -type f -name 'servicehub-admin-*.jar' ! -name '*-plain.jar' | head -n 1)
-          test -n "$jar_path"
-          cp "$jar_path" "$release/servicehub-admin.jar"
+          test -s /tmp/servicehub-admin.jar
+          cp /tmp/servicehub-admin.jar "$release/servicehub-admin.jar"
           ln -sfn "$release" /opt/apps/servicehub/current
           systemctl --user restart servicehub-backend.service
           for i in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
-              rm -f /tmp/servicehub-backend.tar.gz
+              rm -f /tmp/servicehub-admin.jar
               exit 0
             fi
             sleep 2
