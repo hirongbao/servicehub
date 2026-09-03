@@ -12,8 +12,10 @@ import com.shirongbao.hirongbaohub.dto.ProfileResponse;
 import com.shirongbao.hirongbaohub.dto.PostPageResponse;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
+import com.shirongbao.hirongbaohub.entity.SiteReleaseLog;
 import com.shirongbao.hirongbaohub.service.SitePostService;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
+import com.shirongbao.hirongbaohub.service.SiteReleaseLogService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,11 +34,13 @@ import java.util.Map;
 public class HirongbaoHubController {
     private final SiteProfileService siteProfileService;
     private final SitePostService sitePostService;
+    private final SiteReleaseLogService releaseLogService;
 
     // 初始化个人网站公开接口
-    public HirongbaoHubController(SiteProfileService siteProfileService, SitePostService sitePostService) {
+    public HirongbaoHubController(SiteProfileService siteProfileService, SitePostService sitePostService, SiteReleaseLogService releaseLogService) {
         this.siteProfileService = siteProfileService;
         this.sitePostService = sitePostService;
+        this.releaseLogService = releaseLogService;
     }
 
     // 查询站点资料、社交名片与统计数字
@@ -58,6 +62,10 @@ public class HirongbaoHubController {
                                                    @RequestParam(defaultValue = "12") int size) {
         return ApiResponse.success(sitePostService.publishedPage(category, page, size));
     }
+
+    // 查询已发布更新日志
+    @GetMapping("/releases")
+    public ApiResponse<List<SiteReleaseLog>> releases() { return ApiResponse.success(releaseLogService.published()); }
 
     // 点赞或取消点赞
     @PostMapping("/posts/{id}/like")

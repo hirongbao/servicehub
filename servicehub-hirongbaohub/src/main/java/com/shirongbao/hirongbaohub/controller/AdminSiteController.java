@@ -9,11 +9,14 @@ import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.dto.PostUpsertRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileUpdateRequest;
 import com.shirongbao.hirongbaohub.dto.SocialUpsertRequest;
+import com.shirongbao.hirongbaohub.dto.ReleaseLogUpsertRequest;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SiteProfile;
 import com.shirongbao.hirongbaohub.entity.SiteSocial;
+import com.shirongbao.hirongbaohub.entity.SiteReleaseLog;
 import com.shirongbao.hirongbaohub.service.SitePostService;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
+import com.shirongbao.hirongbaohub.service.SiteReleaseLogService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,11 +34,13 @@ import java.util.Map;
 public class AdminSiteController {
     private final SitePostService postService;
     private final SiteProfileService profileService;
+    private final SiteReleaseLogService releaseLogService;
 
     // 初始化站点内容管理接口
-    public AdminSiteController(SitePostService postService, SiteProfileService profileService) {
+    public AdminSiteController(SitePostService postService, SiteProfileService profileService, SiteReleaseLogService releaseLogService) {
         this.postService = postService;
         this.profileService = profileService;
+        this.releaseLogService = releaseLogService;
     }
 
     // 查询动态列表
@@ -68,6 +73,26 @@ public class AdminSiteController {
         postService.delete(id);
         return ApiResponse.success();
     }
+
+    // 查询全部更新日志
+    @GetMapping("/releases")
+    public ApiResponse<List<SiteReleaseLog>> listReleases() { return ApiResponse.success(releaseLogService.list()); }
+
+    // 创建更新日志
+    @PostMapping("/releases")
+    public ApiResponse<SiteReleaseLog> createRelease(@Valid @RequestBody ReleaseLogUpsertRequest request) { return ApiResponse.success(releaseLogService.create(request)); }
+
+    // 编辑更新日志
+    @PostMapping("/releases/{id}")
+    public ApiResponse<SiteReleaseLog> updateRelease(@PathVariable Long id, @Valid @RequestBody ReleaseLogUpsertRequest request) { return ApiResponse.success(releaseLogService.update(id, request)); }
+
+    // 更新日志发布或下架
+    @PostMapping("/releases/{id}/status")
+    public ApiResponse<SiteReleaseLog> updateReleaseStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body) { return ApiResponse.success(releaseLogService.updateStatus(id, body.get("status"))); }
+
+    // 删除更新日志
+    @DeleteMapping("/releases/{id}")
+    public ApiResponse<Void> deleteRelease(@PathVariable Long id) { releaseLogService.delete(id); return ApiResponse.success(); }
 
     // 查询站点资料与社媒名片
     @GetMapping("/profile")
