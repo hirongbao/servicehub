@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -135,11 +136,11 @@ public class SitePostService {
         visitorMapper.updateById(visitor);
     }
 
-    // 根据实际在线数与历史访客数计算展示在线数
+    // 生成约三千人的展示在线数，并为每次心跳加入受控抖动
     private int displayOnlineCount(int actual, long totalVisitors) {
-        if (actual >= 8 || totalVisitors == 0) return actual;
-        int gentleBaseline = Math.max(3, (int) Math.ceil(Math.sqrt(totalVisitors)));
-        return Math.max(actual, Math.min(actual + 5, gentleBaseline));
+        int activityOffset = Math.min(Math.max(actual, 0), 100);
+        int jitter = ThreadLocalRandom.current().nextInt(-80, 81);
+        return Math.max(2_800, Math.min(3_200, 3_000 + activityOffset + jitter));
     }
 
     // 对访客地址做不可逆摘要，避免持久化原始 IP

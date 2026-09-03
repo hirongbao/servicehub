@@ -14,6 +14,7 @@ import com.shirongbao.hirongbaohub.entity.SiteSocial;
 import com.shirongbao.hirongbaohub.mapper.SiteProfileMapper;
 import com.shirongbao.hirongbaohub.mapper.SiteSocialMapper;
 import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
+import com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import org.springframework.stereotype.Service;
 
@@ -24,12 +25,15 @@ public class SiteProfileService {
     private final SiteProfileMapper profileMapper;
     private final SiteSocialMapper socialMapper;
     private final SitePostMapper postMapper;
+    private final SiteVisitorMapper visitorMapper;
 
     // 初始化站点资料服务
-    public SiteProfileService(SiteProfileMapper profileMapper, SiteSocialMapper socialMapper, SitePostMapper postMapper) {
+    public SiteProfileService(SiteProfileMapper profileMapper, SiteSocialMapper socialMapper, SitePostMapper postMapper,
+                              SiteVisitorMapper visitorMapper) {
         this.profileMapper = profileMapper;
         this.socialMapper = socialMapper;
         this.postMapper = postMapper;
+        this.visitorMapper = visitorMapper;
     }
 
     // 查询启用中的站点资料与社交名片
@@ -49,8 +53,9 @@ public class SiteProfileService {
                 .map(s -> new ProfileResponse.SocialItem(s.getPlatform(), s.getIconName(), s.getUrl(), s.getQrCodeUrl()))
                 .toList();
         long publishedPosts = postMapper.selectCount(new LambdaQueryWrapper<SitePost>().eq(SitePost::getStatus, 1));
+        long totalVisitors = visitorMapper.selectCount(null);
         ProfileResponse.Stats stats = new ProfileResponse.Stats(
-                (int) publishedPosts, profile.getStatFollowers(), profile.getStatFollowing());
+                (int) publishedPosts, totalVisitors, profile.getStatFollowing());
         return new ProfileResponse(profile.getName(), profile.getHandle(), profile.getBio(),
                 profile.getAvatarUrl(), items, stats);
     }
