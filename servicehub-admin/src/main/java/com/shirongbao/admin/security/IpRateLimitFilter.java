@@ -71,14 +71,37 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
         return "127.0.0.1".equals(ip) || "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
     }
 
-    // 提取经过 Nginx 转发后的真实客户端 IP
+    // 提取经过可信反向代理转发后的真实客户端 IP
     private String resolveClientIp(HttpServletRequest request) {
+        String remoteAddr = normalizeIp(request.getRemoteAddr());
+        if (!isTrustedProxy(remoteAddr)) {
+            return remoteAddr;
+        }
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",", 2)[0].trim();
+            String candidate = normalizeIp(forwarded.split(",", 2)[0]);
+            if (isValidClientIp(candidate)) return candidate;
         }
-        String real = request.getHeader("X-Real-IP");
-        return real == null || real.isBlank() ? request.getRemoteAddr() : real.trim();
+        String real = normalizeIp(request.getHeader("X-Real-IP"));
+        return isValidClientIp(real) ? real : remoteAddr;
+    }
+
+    // 判断连接来源是否为本机反向代理
+    private boolean isTrustedProxy(String ip) {
+        return isTrustedLocalIp(ip);
+    }
+
+    // 规范化 IPv4 映射的回环地址
+    private String normalizeIp(String ip) {
+        if (ip == null || ip.isBlank()) return "";
+        String value = ip.trim();
+        if (value.startsWith("::ffff:")) return value.substring(7);
+        return value;
+    }
+
+    // 校验代理头中的客户端地址格式
+    private boolean isValidClientIp(String ip) {
+        return !ip.isBlank() && ip.length() <= 45 && !ip.contains("/") && !ip.contains(" ");
     }
 
     // 查询并缓存永久封禁地址
