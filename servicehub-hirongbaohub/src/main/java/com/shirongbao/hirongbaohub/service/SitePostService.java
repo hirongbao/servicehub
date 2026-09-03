@@ -104,9 +104,10 @@ public class SitePostService {
     // 记录访客心跳并统计最近一分钟内的独立客户端
     public Map<String, Object> heartbeat(String clientId, String remoteAddress) {
         long now = System.currentTimeMillis();
-        heartbeats.put(clientId.trim(), now);
+        String visitorId = clientId == null || clientId.isBlank() ? remoteAddress : clientId.trim();
+        heartbeats.put(visitorId, now);
         heartbeats.entrySet().removeIf(entry -> now - entry.getValue() > HEARTBEAT_TTL_MILLIS);
-        recordVisit(remoteAddress);
+        recordVisit(visitorId);
         int actual = heartbeats.size();
         long totalVisitors = visitorMapper.selectCount(null);
         int display = displayOnlineCount(actual, totalVisitors);
