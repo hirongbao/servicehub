@@ -20,5 +20,6 @@ public class SiteComment {
     private Long postId;
     private String author;
     private String content;
+    private Integer status;
     private LocalDateTime createdAt;
 }

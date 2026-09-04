@@ -35,12 +35,16 @@ public class AdminSiteController {
     private final SitePostService postService;
     private final SiteProfileService profileService;
     private final SiteReleaseLogService releaseLogService;
+    private final com.shirongbao.hirongbaohub.service.SiteCommentService commentService;
+    private final com.shirongbao.hirongbaohub.mapper.SitePostMapper postMapper;
 
     // 初始化站点内容管理接口
-    public AdminSiteController(SitePostService postService, SiteProfileService profileService, SiteReleaseLogService releaseLogService) {
+    public AdminSiteController(SitePostService postService, SiteProfileService profileService, SiteReleaseLogService releaseLogService, com.shirongbao.hirongbaohub.service.SiteCommentService commentService, com.shirongbao.hirongbaohub.mapper.SitePostMapper postMapper) {
         this.postService = postService;
         this.profileService = profileService;
         this.releaseLogService = releaseLogService;
+        this.commentService = commentService;
+        this.postMapper = postMapper;
     }
 
     // 查询动态列表
@@ -124,6 +128,26 @@ public class AdminSiteController {
     @DeleteMapping("/socials/{id}")
     public ApiResponse<Void> deleteSocial(@PathVariable Long id) {
         profileService.deleteSocial(id);
+        return ApiResponse.success();
+    }
+
+    // 评论相关接口
+    @GetMapping("/comments/page")
+    public ApiResponse<com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.shirongbao.hirongbaohub.dto.AdminCommentResponse>> listComments(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "1") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "12") int size) {
+        return ApiResponse.success(commentService.adminPage(page, size, postMapper));
+    }
+
+    @PostMapping("/comments/{id}/status")
+    public ApiResponse<Void> updateCommentStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+        commentService.updateStatus(id, body.get("status"));
+        return ApiResponse.success();
+    }
+
+    @DeleteMapping("/comments/{id}")
+    public ApiResponse<Void> deleteComment(@PathVariable Long id) {
+        commentService.delete(id);
         return ApiResponse.success();
     }
 }
