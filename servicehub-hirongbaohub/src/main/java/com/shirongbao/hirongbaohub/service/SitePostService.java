@@ -15,6 +15,10 @@ import com.shirongbao.hirongbaohub.entity.SitePostMedia;
 import com.shirongbao.hirongbaohub.entity.SiteVisitor;
 import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
 import com.shirongbao.hirongbaohub.mapper.SitePostMediaMapper;
+import com.shirongbao.hirongbaohub.entity.SiteSubscriber;
+import com.shirongbao.hirongbaohub.service.SiteSubscriberService;
+import com.shirongbao.noticehub.service.NoticeService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,15 +41,23 @@ public class SitePostService {
     private final SitePostMediaMapper mediaMapper;
     private final SiteCommentService commentService;
     private final com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper;
+    private final SiteSubscriberService subscriberService;
+    private final NoticeService noticeService;
     private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
+
+    @Value("${noticehub.site.url:https://hrb.design}")
+    private String siteUrl;
 
     // 初始化动态业务服务
     public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService,
-                           com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper) {
+                           com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper,
+                           SiteSubscriberService subscriberService, NoticeService noticeService) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
         this.commentService = commentService;
         this.visitorMapper = visitorMapper;
+        this.subscriberService = subscriberService;
+        this.noticeService = noticeService;
     }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
@@ -191,6 +203,16 @@ public class SitePostService {
         post.setMedia(mediaMapper.selectList(new LambdaQueryWrapper<SitePostMedia>()
                 .eq(SitePostMedia::getPostId, post.getId())
                 .orderByAsc(SitePostMedia::getSortOrder)));
+                
+        // 通知所有有效订阅者
+        List<SiteSubscriber> subs = subscriberService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteSubscriber>().eq(SiteSubscriber::getStatus, 1));
+        if (!subs.isEmpty()) {
+            String excerpt = content != null ? (content.length() > 50 ? content.substring(0, 50) + "..." : content) : "分享了新的内容";
+            String url = siteUrl + "?post=" + post.getId();
+            for (SiteSubscriber sub : subs) {
+                noticeService.sendPostUpdateNotification(sub.getEmail(), post.getCategoryName(), excerpt, url);
+            }
+        }
         return post;
     }
 

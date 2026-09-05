@@ -10,12 +10,15 @@ import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.dto.LikeRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
 import com.shirongbao.hirongbaohub.dto.PostPageResponse;
+import com.shirongbao.hirongbaohub.dto.SubscribeRequest;
+import com.shirongbao.hirongbaohub.dto.VerifyRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SiteReleaseLog;
 import com.shirongbao.hirongbaohub.service.SitePostService;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
 import com.shirongbao.hirongbaohub.service.SiteReleaseLogService;
+import com.shirongbao.hirongbaohub.service.SiteSubscriberService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,12 +38,14 @@ public class HirongbaoHubController {
     private final SiteProfileService siteProfileService;
     private final SitePostService sitePostService;
     private final SiteReleaseLogService releaseLogService;
+    private final SiteSubscriberService subscriberService;
 
     // 初始化个人网站公开接口
-    public HirongbaoHubController(SiteProfileService siteProfileService, SitePostService sitePostService, SiteReleaseLogService releaseLogService) {
+    public HirongbaoHubController(SiteProfileService siteProfileService, SitePostService sitePostService, SiteReleaseLogService releaseLogService, SiteSubscriberService subscriberService) {
         this.siteProfileService = siteProfileService;
         this.sitePostService = sitePostService;
         this.releaseLogService = releaseLogService;
+        this.subscriberService = subscriberService;
     }
 
     // 查询站点资料、社交名片与统计数字
@@ -86,6 +91,20 @@ public class HirongbaoHubController {
     @PostMapping("/heartbeat")
     public ApiResponse<Map<String, Object>> heartbeat(@Valid @RequestBody HeartbeatRequest request, HttpServletRequest httpRequest) {
         return ApiResponse.success(sitePostService.heartbeat(request.clientId(), resolveClientIp(httpRequest)));
+    }
+
+    // 请求订阅获取验证码
+    @PostMapping("/subscribe/request")
+    public ApiResponse<Void> requestSubscription(@Valid @RequestBody SubscribeRequest request) {
+        subscriberService.requestSubscription(request.getEmail());
+        return ApiResponse.success(null);
+    }
+
+    // 验证订阅验证码
+    @PostMapping("/subscribe/verify")
+    public ApiResponse<Void> verifySubscription(@Valid @RequestBody VerifyRequest request) {
+        subscriberService.verifySubscription(request.getEmail(), request.getCode());
+        return ApiResponse.success(null);
     }
 
     // 读取可信反向代理后的真实客户端地址
