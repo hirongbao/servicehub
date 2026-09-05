@@ -24,10 +24,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: 2
   mail:
-    host: ${MAIL_HOST:}
+    host: ${MAIL_HOST:smtp.qq.com}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    username: ${MAIL_USERNAME:hirongbao@qq.com}
+    password: ${MAIL_PASSWORD:zdjolrubsppaebic}
     properties:
       mail:
         smtp:
@@ -71,5 +71,5 @@ servicehub:
 
 noticehub:
   site:
-    name: ${SITE_NAME:HiRongBao}
-    url: ${SITE_URL:https://hrb.design}
+    name: ${SITE_NAME:hirongbao}
+    url: ${SITE_URL:https://hirongbao.com}
