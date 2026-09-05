@@ -10,7 +10,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication(scanBasePackages = "com.shirongbao")
-@MapperScan("com.shirongbao")
+@MapperScan("com.shirongbao.**.mapper")
 public class ServiceHubApplication {
     // 启动 ServiceHub 管理后台应用
     public static void main(String[] args) { SpringApplication.run(ServiceHubApplication.class, args); }
