@@ -214,11 +214,19 @@ public class SitePostService {
         if (!subs.isEmpty()) {
             String excerpt = content != null ? (content.length() > 50 ? content.substring(0, 50) + "..." : content) : "分享了新的内容";
             String url = siteUrl + "?postId=" + post.getId();
-            for (SiteSubscriber sub : subs) {
-                String token = subscriberService.generateUnsubscribeToken(sub.getEmail());
-                String unsubscribeUrl = siteUrl + "?unsubscribe=true&email=" + sub.getEmail() + "&token=" + token;
-                noticeService.sendPostUpdateNotification(sub.getEmail(), post.getCategoryName(), excerpt, url, unsubscribeUrl);
-            }
+            
+            // 异步发送邮件通知，避免阻塞发布接口
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                for (SiteSubscriber sub : subs) {
+                    try {
+                        String token = subscriberService.generateUnsubscribeToken(sub.getEmail());
+                        String unsubscribeUrl = siteUrl + "?unsubscribe=true&email=" + sub.getEmail() + "&token=" + token;
+                        noticeService.sendPostUpdateNotification(sub.getEmail(), post.getCategoryName(), excerpt, url, unsubscribeUrl);
+                    } catch (Exception e) {
+                        System.err.println("Failed to send email to " + sub.getEmail() + ": " + e.getMessage());
+                    }
+                }
+            });
         }
         return post;
     }
