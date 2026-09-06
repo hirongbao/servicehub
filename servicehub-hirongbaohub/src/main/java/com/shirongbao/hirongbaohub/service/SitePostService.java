@@ -208,11 +208,29 @@ public class SitePostService {
         List<SiteSubscriber> subs = subscriberService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteSubscriber>().eq(SiteSubscriber::getStatus, 1));
         if (!subs.isEmpty()) {
             String excerpt = content != null ? (content.length() > 50 ? content.substring(0, 50) + "..." : content) : "分享了新的内容";
-            String url = siteUrl + "?post=" + post.getId();
+            String url = siteUrl + "?postId=" + post.getId();
             for (SiteSubscriber sub : subs) {
-                noticeService.sendPostUpdateNotification(sub.getEmail(), post.getCategoryName(), excerpt, url);
+                String token = subscriberService.generateUnsubscribeToken(sub.getEmail());
+                String unsubscribeUrl = siteUrl + "?unsubscribe=true&email=" + sub.getEmail() + "&token=" + token;
+                noticeService.sendPostUpdateNotification(sub.getEmail(), post.getCategoryName(), excerpt, url, unsubscribeUrl);
             }
         }
+        return post;
+    }
+
+    // 根据 ID 查询单条已发布动态
+    public SitePost getPublishedPost(Long id) {
+        SitePost post = require(id);
+        if (post.getStatus() != 1) {
+            throw new IllegalArgumentException("动态不存在或未公开");
+        }
+        fillMedia(List.of(post));
+        
+        java.util.Map<Long, List<SiteComment>> grouped = new java.util.HashMap<>();
+        commentService.fillByPostIds(List.of(post.getId()), grouped);
+        post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+        
+        post.setCategory(toCategory(post));
         return post;
     }
 

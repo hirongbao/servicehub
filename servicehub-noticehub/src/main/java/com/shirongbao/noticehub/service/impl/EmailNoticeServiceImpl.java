@@ -68,7 +68,7 @@ public class EmailNoticeServiceImpl implements NoticeService {
 
     @Async
     @Override
-    public void sendPostUpdateNotification(String email, String postTitle, String postExcerpt, String postUrl) {
+    public void sendPostUpdateNotification(String email, String postTitle, String postExcerpt, String postUrl, String unsubscribeUrl) {
         String subject = "[" + siteName + "] 新动态：" + postTitle;
         String content = "<!DOCTYPE html>\n" +
                 "<html lang=\"zh-CN\">\n" +
@@ -98,7 +98,7 @@ public class EmailNoticeServiceImpl implements NoticeService {
                 "                    <tr>\n" +
                 "                        <td style=\"background-color: #18181b; padding: 40px 48px; text-align: center;\">\n" +
                 "                            <p style=\"margin: 0 0 16px 0; font-size: 13px; color: #71717a;\">\n" +
-                "                                您收到此邮件是因为您订阅了 " + siteName + "。\n" +
+                "                                您收到此邮件是因为您订阅了 " + siteName + "。<br><a href=\"" + unsubscribeUrl + "\" style=\"color: #a1a1aa; text-decoration: underline; margin-top: 8px; display: inline-block;\">退订通知</a>\n" +
                 "                            </p>\n" +
                 "                            <p style=\"margin: 0; font-size: 11px; color: #52525b; text-transform: uppercase; letter-spacing: 3px;\">\n" +
                 "                                © " + java.time.Year.now().getValue() + " " + siteName + ". ALL RIGHTS RESERVED.\n" +

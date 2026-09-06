@@ -6,5 +6,6 @@ import com.shirongbao.hirongbaohub.entity.SiteSubscriber;
 public interface SiteSubscriberService extends IService<SiteSubscriber> {
     void requestSubscription(String email);
     void verifySubscription(String email, String code);
-    void unsubscribe(String email);
+    String generateUnsubscribeToken(String email);
+    void unsubscribe(String email, String token);
 }

@@ -11,6 +11,7 @@ import com.shirongbao.hirongbaohub.dto.LikeRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
 import com.shirongbao.hirongbaohub.dto.PostPageResponse;
 import com.shirongbao.hirongbaohub.dto.SubscribeRequest;
+import com.shirongbao.hirongbaohub.dto.UnsubscribeRequest;
 import com.shirongbao.hirongbaohub.dto.VerifyRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
@@ -68,6 +69,12 @@ public class HirongbaoHubController {
         return ApiResponse.success(sitePostService.publishedPage(category, page, size));
     }
 
+    // 根据 ID 查询单条动态
+    @GetMapping("/posts/{id}")
+    public ApiResponse<SitePost> post(@PathVariable Long id) {
+        return ApiResponse.success(sitePostService.getPublishedPost(id));
+    }
+
     // 查询已发布更新日志
     @GetMapping("/releases")
     public ApiResponse<List<SiteReleaseLog>> releases() { return ApiResponse.success(releaseLogService.published()); }
@@ -104,6 +111,13 @@ public class HirongbaoHubController {
     @PostMapping("/subscribe/verify")
     public ApiResponse<Void> verifySubscription(@Valid @RequestBody VerifyRequest request) {
         subscriberService.verifySubscription(request.getEmail(), request.getCode());
+        return ApiResponse.success(null);
+    }
+
+    // 取消订阅
+    @PostMapping("/subscribe/unsubscribe")
+    public ApiResponse<Void> unsubscribe(@RequestBody UnsubscribeRequest request) {
+        subscriberService.unsubscribe(request.email(), request.token());
         return ApiResponse.success(null);
     }
 

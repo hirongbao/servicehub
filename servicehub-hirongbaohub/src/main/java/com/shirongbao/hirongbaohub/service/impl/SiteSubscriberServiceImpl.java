@@ -37,7 +37,7 @@ public class SiteSubscriberServiceImpl extends ServiceImpl<SiteSubscriberMapper,
             this.save(subscriber);
         } else {
             if (subscriber.getStatus() == 1) {
-                throw new RuntimeException("该邮箱已经订阅，无需重复订阅");
+                throw new IllegalArgumentException("您已经订阅过了，无需重复订阅");
             }
             subscriber.setVerifyCode(code);
             subscriber.setCodeExpiresAt(expiresAt);
@@ -53,16 +53,16 @@ public class SiteSubscriberServiceImpl extends ServiceImpl<SiteSubscriberMapper,
     public void verifySubscription(String email, String code) {
         SiteSubscriber subscriber = this.getOne(new LambdaQueryWrapper<SiteSubscriber>().eq(SiteSubscriber::getEmail, email));
         if (subscriber == null) {
-            throw new RuntimeException("找不到订阅记录");
+            throw new IllegalArgumentException("找不到订阅记录，请先获取验证码");
         }
         if (subscriber.getStatus() == 1) {
-            throw new RuntimeException("该邮箱已经验证过了");
+            throw new IllegalArgumentException("该邮箱已经验证过了");
         }
         if (subscriber.getCodeExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("验证码已过期，请重新获取");
+            throw new IllegalArgumentException("验证码已过期，请重新获取");
         }
         if (!code.equals(subscriber.getVerifyCode())) {
-            throw new RuntimeException("验证码错误");
+            throw new IllegalArgumentException("验证码错误");
         }
         
         subscriber.setStatus(1); // 已验证
@@ -71,7 +71,23 @@ public class SiteSubscriberServiceImpl extends ServiceImpl<SiteSubscriberMapper,
     }
 
     @Override
-    public void unsubscribe(String email) {
+    public String generateUnsubscribeToken(String email) {
+        SiteSubscriber subscriber = this.getOne(new LambdaQueryWrapper<SiteSubscriber>().eq(SiteSubscriber::getEmail, email));
+        if (subscriber == null) return null;
+        // Simple MD5 signature for token
+        String raw = email + "-" + subscriber.getCreatedAt().toEpochSecond(java.time.ZoneOffset.UTC) + "-hirongbaohub";
+        return org.springframework.util.DigestUtils.md5DigestAsHex(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void unsubscribe(String email, String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("无效的退订链接");
+        }
+        String expectedToken = generateUnsubscribeToken(email);
+        if (!token.equals(expectedToken)) {
+            throw new IllegalArgumentException("退订链接已失效或不正确");
+        }
         SiteSubscriber subscriber = this.getOne(new LambdaQueryWrapper<SiteSubscriber>().eq(SiteSubscriber::getEmail, email));
         if (subscriber != null) {
             subscriber.setStatus(2); // 已退订
