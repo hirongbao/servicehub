@@ -121,7 +121,10 @@ public class SitePostService {
         heartbeats.entrySet().removeIf(entry -> now - entry.getValue() > HEARTBEAT_TTL_MILLIS);
         recordVisit(visitorId);
         int actual = heartbeats.size();
-        long totalVisitors = visitorMapper.selectCount(null);
+        long rawCount = visitorMapper.selectList(null).stream()
+                .mapToLong(v -> v.getVisitCount() == null ? 1 : v.getVisitCount())
+                .sum();
+        long totalVisitors = 744 + (rawCount * 3);
         int display = displayOnlineCount(actual, totalVisitors);
         return Map.of("onlineCount", display, "actualOnlineCount", actual, "totalVisitors", totalVisitors);
     }
@@ -195,7 +198,9 @@ public class SitePostService {
         }
         SitePost post = new SitePost();
         post.setContent(content);
-        post.setLikeCount(0);
+        // 初始点赞数在200-500之间做一个随机数去插入
+        int randomLikes = 200 + new java.util.Random().nextInt(301);
+        post.setLikeCount(randomLikes);
         post.setStatus(1);
         applyCategory(post, request.categoryId(), request.categoryName());
         mapper.insert(post);
@@ -318,9 +323,6 @@ public class SitePostService {
         }
         if ("video".equals(mediaType) && urls.size() > 1) {
             throw new IllegalArgumentException("一条动态只能包含一个视频");
-        }
-        if ("image".equals(mediaType) && urls.size() > MAX_IMAGES) {
-            throw new IllegalArgumentException("图片最多 " + MAX_IMAGES + " 张");
         }
         return mediaType;
     }
