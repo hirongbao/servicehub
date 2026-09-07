@@ -66,6 +66,9 @@ public class SitePostService {
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId));
         fillMedia(posts);
+        for (SitePost post : posts) {
+            post.setCategory(toCategory(post));
+        }
         return posts;
     }
 
