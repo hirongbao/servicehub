@@ -186,8 +186,12 @@ public class SitePostService {
 
     // 校验动态存在后发表访客评论
     public SiteComment addComment(Long id, CommentCreateRequest request) {
+        return addComment(id, request, null);
+    }
+
+    public SiteComment addComment(Long id, CommentCreateRequest request, String ipAddress) {
         require(id);
-        return commentService.add(id, request);
+        return commentService.add(id, request, ipAddress);
     }
 
     // 发布动态

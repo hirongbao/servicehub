@@ -7,14 +7,15 @@ package com.shirongbao.admin.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shirongbao.common.response.ApiResponse;
+import com.shirongbao.common.util.IpUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.core.annotation.Order;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -43,9 +44,9 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String ip = resolveClientIp(request);
-        // 本机回环地址用于 Nginx、健康检查和服务间调用，不参与公网限流
-        if (isTrustedLocalIp(ip)) {
+        String ip = IpUtils.getClientIp(request);
+        // 本机系统内部调用与健康检查放行，外部公网真实 IP 参与安全风控
+        if (IpUtils.isInternalIp(ip)) {
             chain.doFilter(request, response);
             return;
         }
@@ -64,44 +65,6 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
             return;
         }
         chain.doFilter(request, response);
-    }
-
-    // 判断是否为本机回环地址
-    private boolean isTrustedLocalIp(String ip) {
-        return "127.0.0.1".equals(ip) || "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
-    }
-
-    // 提取经过可信反向代理转发后的真实客户端 IP
-    private String resolveClientIp(HttpServletRequest request) {
-        String remoteAddr = normalizeIp(request.getRemoteAddr());
-        if (!isTrustedProxy(remoteAddr)) {
-            return remoteAddr;
-        }
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            String candidate = normalizeIp(forwarded.split(",", 2)[0]);
-            if (isValidClientIp(candidate)) return candidate;
-        }
-        String real = normalizeIp(request.getHeader("X-Real-IP"));
-        return isValidClientIp(real) ? real : remoteAddr;
-    }
-
-    // 判断连接来源是否为本机反向代理
-    private boolean isTrustedProxy(String ip) {
-        return isTrustedLocalIp(ip);
-    }
-
-    // 规范化 IPv4 映射的回环地址
-    private String normalizeIp(String ip) {
-        if (ip == null || ip.isBlank()) return "";
-        String value = ip.trim();
-        if (value.startsWith("::ffff:")) return value.substring(7);
-        return value;
-    }
-
-    // 校验代理头中的客户端地址格式
-    private boolean isValidClientIp(String ip) {
-        return !ip.isBlank() && ip.length() <= 45 && !ip.contains("/") && !ip.contains(" ");
     }
 
     // 查询并缓存永久封禁地址

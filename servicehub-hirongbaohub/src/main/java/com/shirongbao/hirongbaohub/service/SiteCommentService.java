@@ -39,11 +39,16 @@ public class SiteCommentService {
         target.putAll(grouped);
     }
 
-    // 发表访客评论
+    // 发表访客评论（重载兼顾旧签名）
     public SiteComment add(Long postId, CommentCreateRequest request) {
+        return add(postId, request, null);
+    }
+
+    public SiteComment add(Long postId, CommentCreateRequest request, String ipAddress) {
         SiteComment comment = new SiteComment();
         comment.setPostId(postId);
         comment.setAuthor(request.author() == null || request.author().isBlank() ? "访客" : request.author().trim());
+        comment.setIpAddress(ipAddress != null && ipAddress.length() > 45 ? ipAddress.substring(0, 45) : ipAddress);
         comment.setContent(request.content().trim());
         comment.setStatus(0); // 0: pending
         mapper.insert(comment);

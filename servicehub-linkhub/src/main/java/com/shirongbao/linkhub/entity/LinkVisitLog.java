@@ -18,6 +18,7 @@ public class LinkVisitLog {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long linkId;
+    private String ipAddress;
     private String referer;
     private String userAgent;
     private LocalDateTime createdAt;
