@@ -49,8 +49,10 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_backend_deploy
           chmod 600 ~/.ssh/servicehub_backend_deploy
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-          scp -i ~/.ssh/servicehub_backend_deploy \
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          timeout 300 scp -C -O -o BatchMode=yes -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/servicehub_backend_deploy \
             /tmp/servicehub-admin.jar \
             "$SERVER_USER@$SERVER_HOST:/tmp/servicehub-admin.jar"
 
@@ -61,5 +63,7 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          ssh -i ~/.ssh/servicehub_backend_deploy "$SERVER_USER@$SERVER_HOST" \
+          timeout 180 ssh -o BatchMode=yes -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/servicehub_backend_deploy "$SERVER_USER@$SERVER_HOST" \
             'set -euo pipefail; release=/opt/apps/servicehub/releases/$(date +%Y%m%d%H%M%S); mkdir -p "$release"; test -s /tmp/servicehub-admin.jar; cp /tmp/servicehub-admin.jar "$release/servicehub-admin.jar"; ln -sfn "$release" /opt/apps/servicehub/current; rm -f /tmp/servicehub-admin.jar; systemctl --user restart servicehub-backend.service; for i in $(seq 1 30); do if curl -fsS --max-time 2 http://127.0.0.1:8080/api/health >/dev/null; then echo "backend running healthy"; exit 0; fi; sleep 2; done; echo "backend health check failed" >&2; systemctl --user status servicehub-backend.service --no-pager >&2 || true; journalctl --user -u servicehub-backend.service -n 80 --no-pager >&2 || true; exit 1'
