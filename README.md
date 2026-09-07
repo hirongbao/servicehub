@@ -51,11 +51,7 @@ java -jar servicehub-admin/target/servicehub-admin-*.jar
 
 ## 部署
 
-推送 `main` 后，GitHub Actions 构建并通过 SSH 调用服务器脚本：
-
-```text
-/opt/scripts/deploy-servicehub-backend.sh
-```
+推送 `main` 后，GitHub Actions 自动在云端编译打包 JAR，并通过 SCP 直传服务器完成发布与健康检查。
 
 生产环境 `.env` 位于服务器 `/opt/apps/servicehub/shared/.env`，不要提交到仓库。
 

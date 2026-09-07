@@ -32,13 +32,21 @@ public class FileRecordService {
         this.maxSize = maxSize;
     }
 
-    // 查询文件记录列表
-    public List<FileRecord> list() { return mapper.selectList(null); }
+    // 查询文件记录列表，并将对象地址动态转为当前配置的加速域名
+    public List<FileRecord> list() {
+        List<FileRecord> records = mapper.selectList(null);
+        for (FileRecord r : records) {
+            if (r.getObjectKey() != null && !r.getObjectKey().isBlank()) {
+                r.setFileUrl(cos.publicUrl(r.getObjectKey()));
+            }
+        }
+        return records;
+    }
 
     // 统计文件记录总数
     public long countAll() { return mapper.selectCount(null); }
 
-    // 校验并上传图片文件，内容重复时直接返回已有记录
+    // 校验并上传图片文件，内容重复时自动校正为加速域名并返回已有记录
     public FileRecord upload(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");
         if (file.getSize() > maxSize) throw new IllegalArgumentException("图片大小不能超过 10MB");
@@ -50,7 +58,14 @@ public class FileRecordService {
             throw new IllegalStateException("读取上传文件失败", e);
         }
         FileRecord existing = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
-        if (existing != null) return existing;
+        if (existing != null) {
+            String expectedUrl = cos.publicUrl(existing.getObjectKey());
+            if (!expectedUrl.equals(existing.getFileUrl())) {
+                existing.setFileUrl(expectedUrl);
+                mapper.updateById(existing);
+            }
+            return existing;
+        }
         String objectKey = cos.upload(file);
         FileRecord record = new FileRecord();
         record.setOriginalName(file.getOriginalFilename() == null || file.getOriginalFilename().isBlank() ? "image" : file.getOriginalFilename());
@@ -64,7 +79,15 @@ public class FileRecordService {
             mapper.insert(record);
         } catch (DuplicateKeyException e) {
             // 并发上传同一内容时，唯一索引兜底，返回已存在记录
-            return mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
+            FileRecord dupe = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
+            if (dupe != null) {
+                String expectedUrl = cos.publicUrl(dupe.getObjectKey());
+                if (!expectedUrl.equals(dupe.getFileUrl())) {
+                    dupe.setFileUrl(expectedUrl);
+                    mapper.updateById(dupe);
+                }
+            }
+            return dupe;
         }
         return record;
     }
