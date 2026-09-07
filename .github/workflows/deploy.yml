@@ -28,10 +28,14 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build backend
+      - name: Verify build
         run: mvn -pl servicehub-admin -am clean package -DskipTests
 
-      - name: Trigger server deployment
+      - name: Prepare source archive
+        if: github.event_name == 'push'
+        run: git archive --format=tar.gz -o /tmp/backend-source.tar.gz HEAD
+
+      - name: Deploy to server
         if: github.event_name == 'push'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -42,19 +46,51 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/servicehub_deploy
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          timeout 360 ssh -o BatchMode=yes -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+          
+          # 1. 直传 48KB 极小源码压缩包至服务器（无需让国内服务器连 GitHub，也无需跨国传输 46MB 大包）
+          scp -o BatchMode=yes -o StrictHostKeyChecking=no \
+            -i ~/.ssh/servicehub_deploy \
+            /tmp/backend-source.tar.gz \
+            "$SERVER_USER@$SERVER_HOST:/tmp/backend-source.tar.gz"
+
+          # 2. 服务器端解压、复用本地 Maven 依赖快速编译打包、原子切换软链并重启
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no \
             -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" '
-            cat /opt/scripts/deploy-servicehub-backend.sh > /opt/apps/servicehub-admin/current/dist/deploy-backend-script.txt 2>/dev/null || true
-            for i in 1 2 3 4 5; do
-              echo "=== 部署尝试第 $i 次 ==="
-              if /opt/scripts/deploy-servicehub-backend.sh; then
-                echo "=== 后端部署成功！==="
+            set -euo pipefail
+            APP_ROOT="/opt/apps/servicehub"
+            SOURCE_DIR="$APP_ROOT/source"
+            RELEASE_DIR="$APP_ROOT/releases/$(date +%Y%m%d%H%M%S)"
+
+            exec 9>"$APP_ROOT/deploy.lock"
+            flock -n 9 || { echo "another backend deployment is already running"; exit 1; }
+
+            mkdir -p "$SOURCE_DIR"
+            tar -xzf /tmp/backend-source.tar.gz -C "$SOURCE_DIR"
+            rm -f /tmp/backend-source.tar.gz
+
+            cd "$SOURCE_DIR"
+            mvn -pl servicehub-admin -am clean package -DskipTests -q
+
+            JAR_PATH=$(find servicehub-admin/target -maxdepth 1 -type f -name "servicehub-admin-*.jar" ! -name "*-plain.jar" | head -n 1)
+            test -n "$JAR_PATH"
+
+            mkdir -p "$RELEASE_DIR"
+            cp "$JAR_PATH" "$RELEASE_DIR/servicehub-admin.jar"
+            ln -sfn "$RELEASE_DIR" "$APP_ROOT/current"
+
+            systemctl --user daemon-reload
+            systemctl --user restart servicehub-backend.service
+
+            for i in $(seq 1 30); do
+              if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
+                echo "backend deployment succeeded"
                 exit 0
               fi
-              echo "第 $i 次拉取/部署失败，等待 5 秒后重试..."
-              sleep 5
+              sleep 2
             done
-            echo "连续 5 次重试均失败，终止部署"
+
+            echo "backend health check failed" >&2
+            systemctl --user status servicehub-backend.service --no-pager >&2 || true
+            journalctl --user -u servicehub-backend.service -n 80 --no-pager >&2 || true
             exit 1
           '
