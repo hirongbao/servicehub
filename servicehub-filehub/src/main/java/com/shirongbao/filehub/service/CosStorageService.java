@@ -25,16 +25,19 @@ public class CosStorageService {
     private final String secretKey;
     private final String region;
     private final String bucket;
+    private final String domain;
     private volatile COSClient client;
 
     public CosStorageService(@Value("${servicehub.cos.secret-id}") String secretId,
                              @Value("${servicehub.cos.secret-key}") String secretKey,
                              @Value("${servicehub.cos.region}") String region,
-                             @Value("${servicehub.cos.bucket}") String bucket) {
+                             @Value("${servicehub.cos.bucket}") String bucket,
+                             @Value("${servicehub.cos.domain:}") String domain) {
         this.secretId = secretId;
         this.secretKey = secretKey;
         this.region = region;
         this.bucket = bucket;
+        this.domain = domain;
     }
 
     // 上传图片到腾讯 COS
@@ -58,6 +61,16 @@ public class CosStorageService {
 
     // 生成图片公开访问地址
     public String publicUrl(String objectKey) {
+        if (domain != null && !domain.isBlank()) {
+            String base = domain.trim();
+            if (!base.startsWith("http://") && !base.startsWith("https://")) {
+                base = "https://" + base;
+            }
+            if (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+            return base + "/" + objectKey;
+        }
         return "https://" + bucket + ".cos." + region + ".myqcloud.com/" + objectKey;
     }
 

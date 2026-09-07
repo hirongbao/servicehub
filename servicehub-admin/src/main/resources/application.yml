@@ -62,6 +62,7 @@ servicehub:
     secret-key: ${COS_SECRET_KEY:}
     region: ${COS_REGION:ap-shanghai}
     bucket: ${COS_BUCKET:}
+    domain: ${COS_DOMAIN:static.hirongbao.com}
     public-url-enabled: ${COS_PUBLIC_URL_ENABLED:true}
   file:
     allowed-content-types: image/jpeg,image/png,image/gif,image/webp
