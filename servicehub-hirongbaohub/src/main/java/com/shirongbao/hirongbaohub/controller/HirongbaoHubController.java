@@ -6,6 +6,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
 import com.shirongbao.common.response.ApiResponse;
+import com.shirongbao.common.util.IpUtils;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.dto.LikeRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
@@ -20,6 +21,7 @@ import com.shirongbao.hirongbaohub.service.SitePostService;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
 import com.shirongbao.hirongbaohub.service.SiteReleaseLogService;
 import com.shirongbao.hirongbaohub.service.SiteSubscriberService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -88,16 +89,16 @@ public class HirongbaoHubController {
         return ApiResponse.success(Map.of("likes", sitePostService.like(id, request.action())));
     }
 
-    // 发表访客评论
+    // 发表访客评论并记录客户端真实 IP
     @PostMapping("/posts/{id}/comments")
-    public ApiResponse<SiteComment> comment(@PathVariable Long id, @Valid @RequestBody CommentCreateRequest request) {
-        return ApiResponse.success(sitePostService.addComment(id, request));
+    public ApiResponse<SiteComment> comment(@PathVariable Long id, @Valid @RequestBody CommentCreateRequest request, HttpServletRequest httpRequest) {
+        return ApiResponse.success(sitePostService.addComment(id, request, IpUtils.getClientIp(httpRequest)));
     }
 
     // 刷新访客心跳并返回当前在线人数
     @PostMapping("/heartbeat")
     public ApiResponse<Map<String, Object>> heartbeat(@Valid @RequestBody HeartbeatRequest request, HttpServletRequest httpRequest) {
-        return ApiResponse.success(sitePostService.heartbeat(request.clientId(), resolveClientIp(httpRequest)));
+        return ApiResponse.success(sitePostService.heartbeat(request.clientId(), IpUtils.getClientIp(httpRequest)));
     }
 
     // 请求订阅获取验证码
@@ -119,36 +120,6 @@ public class HirongbaoHubController {
     public ApiResponse<Void> unsubscribe(@RequestBody UnsubscribeRequest request) {
         subscriberService.unsubscribe(request.email(), request.token());
         return ApiResponse.success(null);
-    }
-
-    // 读取可信反向代理后的真实客户端地址
-    private String resolveClientIp(HttpServletRequest request) {
-        String remoteAddr = normalizeIp(request.getRemoteAddr());
-        if (!isTrustedProxy(remoteAddr)) return remoteAddr;
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            String candidate = normalizeIp(forwarded.split(",", 2)[0]);
-            if (isValidClientIp(candidate)) return candidate;
-        }
-        String real = normalizeIp(request.getHeader("X-Real-IP"));
-        return isValidClientIp(real) ? real : remoteAddr;
-    }
-
-    // 判断请求是否来自本机反向代理
-    private boolean isTrustedProxy(String ip) {
-        return "127.0.0.1".equals(ip) || "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
-    }
-
-    // 规范化 IPv4 映射的回环地址
-    private String normalizeIp(String ip) {
-        if (ip == null || ip.isBlank()) return "";
-        String value = ip.trim();
-        return value.startsWith("::ffff:") ? value.substring(7) : value;
-    }
-
-    // 校验代理头中的客户端地址格式
-    private boolean isValidClientIp(String ip) {
-        return !ip.isBlank() && ip.length() <= 45 && !ip.contains("/") && !ip.contains(" ");
     }
 
     // 心跳请求参数

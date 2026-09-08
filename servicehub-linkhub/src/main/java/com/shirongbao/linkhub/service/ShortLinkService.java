@@ -115,10 +115,11 @@ public class ShortLinkService {
         return link;
     }
 
-    // 记录一次短链访问，保留来源和设备信息
-    public void recordVisit(Long linkId, String referer, String userAgent) {
+    // 记录一次短链访问，保留来源、设备信息与访问者真实 IP
+    public void recordVisit(Long linkId, String referer, String userAgent, String ipAddress) {
         LinkVisitLog visit = new LinkVisitLog();
         visit.setLinkId(linkId);
+        visit.setIpAddress(truncate(ipAddress, 45));
         visit.setReferer(truncate(referer, 512));
         visit.setUserAgent(truncate(userAgent, 512));
         visitMapper.insert(visit);

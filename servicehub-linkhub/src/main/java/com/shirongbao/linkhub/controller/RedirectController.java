@@ -5,6 +5,7 @@
  */
 package com.shirongbao.linkhub.controller;
 
+import com.shirongbao.common.util.IpUtils;
 import com.shirongbao.linkhub.entity.ShortLink;
 import com.shirongbao.linkhub.service.ShortLinkService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +41,7 @@ public class RedirectController {
                     .contentType(MediaType.TEXT_HTML)
                     .body(NOT_FOUND_PAGE);
         }
-        service.recordVisit(link.getId(), request.getHeader("Referer"), request.getHeader("User-Agent"));
+        service.recordVisit(link.getId(), request.getHeader("Referer"), request.getHeader("User-Agent"), IpUtils.getClientIp(request));
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(java.net.URI.create(link.getTargetUrl()))
                 .build();

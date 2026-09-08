@@ -13,11 +13,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminAuthInterceptor adminAuthInterceptor;
-    private final RequestLogInterceptor requestLogInterceptor = new RequestLogInterceptor();
+    private final RequestLogInterceptor requestLogInterceptor;
 
     // 初始化拦截器注册配置
-    public WebMvcConfig(AdminAuthInterceptor adminAuthInterceptor) {
+    public WebMvcConfig(AdminAuthInterceptor adminAuthInterceptor, RequestLogInterceptor requestLogInterceptor) {
         this.adminAuthInterceptor = adminAuthInterceptor;
+        this.requestLogInterceptor = requestLogInterceptor;
     }
 
     // 注册请求日志和管理端鉴权拦截器，放行登录、健康检查、开放文件、开放短链和个人网站公开接口（个人网站管理接口在 /api/site/** 下受保护）
