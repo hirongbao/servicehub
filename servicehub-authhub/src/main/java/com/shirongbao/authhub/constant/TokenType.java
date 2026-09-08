@@ -1,3 +1,3 @@
 package com.shirongbao.authhub.constant;
 
-public enum TokenType { FILEHUB, LINKHUB }
+public enum TokenType { FILEHUB, LINKHUB, HIRONGBAOHUB }

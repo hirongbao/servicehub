@@ -27,6 +27,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(requestLogInterceptor).addPathPatterns("/**");
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/admin/login", "/api/health", "/api/filehub/**", "/api/linkhub/**", "/api/hirongbaohub/profile", "/api/hirongbaohub/posts", "/api/hirongbaohub/posts/**", "/api/hirongbaohub/releases", "/api/hirongbaohub/heartbeat", "/api/hirongbaohub/subscribe/**");
+                .excludePathPatterns("/api/admin/login", "/api/health", "/api/filehub/**", "/api/linkhub/**", "/api/hirongbaohub/profile", "/api/hirongbaohub/posts", "/api/hirongbaohub/posts/**", "/api/hirongbaohub/releases", "/api/hirongbaohub/heartbeat", "/api/hirongbaohub/subscribe/**", "/api/hirongbaohub/post");
     }
 }
