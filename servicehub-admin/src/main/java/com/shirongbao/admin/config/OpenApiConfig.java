@@ -1,12 +1,13 @@
 /*
  * auth: hirongbao
- * create: 2026-08-29
- * desc: OpenAPI 文档配置
+ * create: 2026-09-08
+ * desc: OpenAPI/Swagger 接口文档配置
  */
 package com.shirongbao.admin.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
@@ -15,21 +16,23 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    // 声明 OpenAPI 文档信息与管理端、开放接口的安全方案
     @Bean
-    public OpenAPI serviceHubOpenApi() {
+    public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("ServiceHub API")
-                        .description("个人项目基础服务平台：管理端、开放文件接口（FILEHUB）、开放短链接口（LINKHUB）与个人网站公开接口（HIRONGBAOHUB）。"
-                                + "管理端接口使用登录时返回的 Bearer 凭证，开放接口使用 X-Service-Token 请求头携带对应类型的 Token，个人网站公开接口无需凭证。")
-                        .version("v1"))
+                        .title("ServiceHub API 文档")
+                        .version("1.0.0")
+                        .description("ServiceHub 对外开放的接口调用文档，支持媒体库、短链等模块。")
+                        .contact(new Contact().name("hirongbao").url("https://hirongbao.com")))
                 .components(new Components()
-                        .addSecuritySchemes("AdminToken", new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP).scheme("bearer")
-                                .description("管理员登录凭证"))
-                        .addSecuritySchemes("ServiceToken", new SecurityScheme()
-                                .type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.HEADER).name("X-Service-Token")
-                                .description("服务 Token（FILEHUB / LINKHUB 类型）")));
+                        .addSecuritySchemes("X-Service-Token", new SecurityScheme()
+                                .type(SecurityScheme.Type.APIKEY)
+                                .in(SecurityScheme.In.HEADER)
+                                .name("X-Service-Token")
+                                .description("使用 X-Service-Token Header 鉴权"))
+                        .addSecuritySchemes("BearerAuth", new SecurityScheme()
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .description("使用标准 Authorization Header (Bearer) 鉴权")));
     }
 }
