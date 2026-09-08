@@ -75,3 +75,6 @@ noticehub:
   site:
     name: ${SITE_NAME:hirongbao}
     url: ${SITE_URL:https://hirongbao.com}
+
+springdoc:
+  paths-to-match: /api/filehub/**,/api/linkhub/**
