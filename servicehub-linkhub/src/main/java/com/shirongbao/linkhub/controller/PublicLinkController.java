@@ -1,7 +1,7 @@
 /*
  * auth: hirongbao
  * create: 2026-08-28
- * desc: ÃæÏò LINKHUB Token µÄ¿ª·Å¶ÌÁ´½Ó¿Ú
+ * desc: é¢å‘ LINKHUB Token çš„å¼€æ”¾çŸ­é“¾æ¥å£
  */
 package com.shirongbao.linkhub.controller;
 
@@ -27,7 +27,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 
-@Tag(name = "LinkHub ¿ª·Å½Ó¿Ú", description = "¹©Íâ²¿µ÷ÓÃµÄ¶ÌÁ´Éú³ÉÓë¹ÜÀí API¡£Ö§³ÖÍ¨¹ı X-Service-Token »ò Bearer Token ¼øÈ¨¡£")
+@Tag(name = "LinkHub å¼€æ”¾æ¥å£", description = "ä¾›å¤–éƒ¨è°ƒç”¨çš„çŸ­é“¾ç”Ÿæˆä¸ç®¡ç† APIã€‚æ”¯æŒé€šè¿‡ X-Service-Token æˆ– Bearer Token é‰´æƒã€‚")
 @RestController
 @RequestMapping("/api/linkhub")
 public class PublicLinkController {
@@ -35,45 +35,45 @@ public class PublicLinkController {
     private final ShortLinkService service;
     private final ServiceTokenService tokenService;
 
-    // ³õÊ¼»¯¿ª·Å¶ÌÁ´½Ó¿Ú
+    // åˆå§‹åŒ–å¼€æ”¾çŸ­é“¾æ¥å£
     public PublicLinkController(ShortLinkService service, ServiceTokenService tokenService) {
         this.service = service;
         this.tokenService = tokenService;
     }
 
-    // Ê¹ÓÃ LINKHUB Token ´´½¨¶ÌÁ´
-    @Operation(summary = "´´½¨¶ÌÁ´", description = "½«³¤Á´½Ó×ª»»Îª¶ÌÁ´½Ó¡£")
+    // ä½¿ç”¨ LINKHUB Token åˆ›å»ºçŸ­é“¾
+    @Operation(summary = "åˆ›å»ºçŸ­é“¾", description = "å°†é•¿é“¾æ¥è½¬æ¢ä¸ºçŸ­é“¾æ¥ã€‚")
     @SecurityRequirement(name = "X-Service-Token")
     @SecurityRequirement(name = "BearerAuth")
     @PostMapping("/links")
     public ApiResponse<ShortLink> create(@Valid @RequestBody LinkCreateRequest request,
                                          @Parameter(hidden = true) HttpServletRequest httpRequest,
-                                         @Parameter(description = "·ÃÎÊÆ¾Ö¤") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
-                                         @Parameter(description = "±ê×¼Æ¾Ö¤") @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                         @Parameter(description = "è®¿é—®å‡­è¯") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+                                         @Parameter(description = "æ ‡å‡†å‡­è¯") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(httpRequest, serviceToken, authorization, "create");
         ShortLink link = service.create(request);
         link.setTargetUrl(service.fullUrl(link.getCode(), httpRequest));
         return ApiResponse.success(link);
     }
 
-    // Ê¹ÓÃ LINKHUB Token ²éÑ¯¶ÌÁ´ÏêÇéºÍÍ³¼Æ
-    @Operation(summary = "²éÑ¯¶ÌÁ´", description = "»ñÈ¡¶ÌÁ´µÄÏêÇéÓë·ÃÎÊÍ³¼ÆÊı¾İ¡£")
+    // ä½¿ç”¨ LINKHUB Token æŸ¥è¯¢çŸ­é“¾è¯¦æƒ…å’Œç»Ÿè®¡
+    @Operation(summary = "æŸ¥è¯¢çŸ­é“¾", description = "è·å–çŸ­é“¾çš„è¯¦æƒ…ä¸è®¿é—®ç»Ÿè®¡æ•°æ®ã€‚")
     @SecurityRequirement(name = "X-Service-Token")
     @SecurityRequirement(name = "BearerAuth")
     @GetMapping("/links/{code}")
-    public ApiResponse<Map<String, Object>> detail(@Parameter(description = "¶ÌÁ´´úÂë") @PathVariable String code,
+    public ApiResponse<Map<String, Object>> detail(@Parameter(description = "çŸ­é“¾ä»£ç ") @PathVariable String code,
                                                    @Parameter(hidden = true) HttpServletRequest request,
-                                                   @Parameter(description = "·ÃÎÊÆ¾Ö¤") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
-                                                   @Parameter(description = "±ê×¼Æ¾Ö¤") @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                                   @Parameter(description = "è®¿é—®å‡­è¯") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+                                                   @Parameter(description = "æ ‡å‡†å‡­è¯") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(request, serviceToken, authorization, "query");
         ShortLink link = service.resolve(code);
         if (link == null) {
-            throw new IllegalArgumentException("¶ÌÁ´²»´æÔÚ¡¢ÒÑ½ûÓÃ»òÒÑ¹ıÆÚ");
+            throw new IllegalArgumentException("çŸ­é“¾ä¸å­˜åœ¨ã€å·²ç¦ç”¨æˆ–å·²è¿‡æœŸ");
         }
         return ApiResponse.success(Map.of("link", link, "stats", service.stats(link.getId())));
     }
 
-    // Ğ£Ñé·şÎñ Token ²¢¼ÇÂ¼Ê¹ÓÃÈÕÖ¾
+    // æ ¡éªŒæœåŠ¡ Token å¹¶è®°å½•ä½¿ç”¨æ—¥å¿—
     private void recordUsage(HttpServletRequest request, String serviceToken, String authorization, String action) {
         String token = serviceToken;
         if ((token == null || token.isBlank()) && authorization != null && authorization.startsWith("Bearer ")) {

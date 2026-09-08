@@ -9,6 +9,7 @@ import com.shirongbao.common.response.ApiResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import com.shirongbao.common.utils.IpRegionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -103,6 +104,10 @@ public class LogController {
         dataParams.add(offset);
 
         List<Map<String, Object>> list = jdbcTemplate.queryForList(dataSql, dataParams.toArray());
+        for (Map<String, Object> row : list) {
+            String ipAddr = (String) row.get("ip_address");
+            row.put("region", IpRegionUtils.getRegion(ipAddr));
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("list", list);
@@ -161,6 +166,10 @@ public class LogController {
                 "MAX(created_at) AS last_seen " +
                 "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
                 "GROUP BY ip_address ORDER BY count DESC LIMIT 10");
+        for (Map<String, Object> row : topIps) {
+            String ipAddr = (String) row.get("ip_address");
+            row.put("region", IpRegionUtils.getRegion(ipAddr));
+        }
         stats.put("topIps", topIps);
 
         // 耗时分布

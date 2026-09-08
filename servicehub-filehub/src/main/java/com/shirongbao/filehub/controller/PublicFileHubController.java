@@ -15,17 +15,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Tag(name = "FileHub 开放接口", description = "供外部调用的媒体资产管理 API。支持通过 X-Service-Token 或 Bearer Token 鉴权。")
 @RestController
@@ -41,19 +36,6 @@ public class PublicFileHubController {
         this.tokenService = tokenService;
     }
 
-    // 查询文件列表
-    @Operation(summary = "查询文件列表", description = "获取当前空间下所有已上传的媒体文件元数据列表。")
-    @SecurityRequirement(name = "X-Service-Token")
-    @SecurityRequirement(name = "BearerAuth")
-    @GetMapping
-    public ApiResponse<List<FileRecord>> list(
-            @Parameter(hidden = true) HttpServletRequest request,
-            @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
-            @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(request, serviceToken, authorization, "list");
-        return ApiResponse.success(service.list());
-    }
-
     // 使用 FileHub Token 上传图片
     @Operation(summary = "上传媒体文件", description = "支持上传单张图片或文件。支持格式：jpg/png/webp/gif 等。")
     @SecurityRequirement(name = "X-Service-Token")
@@ -66,21 +48,6 @@ public class PublicFileHubController {
             @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(request, serviceToken, authorization, "upload");
         return ApiResponse.success(service.upload(file));
-    }
-
-    // 使用 FileHub Token 删除图片
-    @Operation(summary = "删除媒体文件", description = "根据文件记录的 ID 彻底删除指定文件。")
-    @SecurityRequirement(name = "X-Service-Token")
-    @SecurityRequirement(name = "BearerAuth")
-    @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(
-            @Parameter(description = "文件 ID") @PathVariable Long id,
-            @Parameter(hidden = true) HttpServletRequest request,
-            @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
-            @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
-        recordUsage(request, serviceToken, authorization, "delete");
-        service.delete(id);
-        return ApiResponse.success();
     }
 
     // 校验服务 Token 并记录使用日志
