@@ -22,7 +22,7 @@ public class IpRegionUtils {
     }
 
     /**
-     * 解析 IP 返回格式化后的地址（如：浙江 杭州 (电信)）
+     * 解析 IP 返回格式化后的地址（如：杭州 (电信)）
      */
     public static String getRegion(String ip) {
         if (ip == null || ip.trim().isEmpty() || searcher == null) {
@@ -45,16 +45,11 @@ public class IpRegionUtils {
                     sb.append(country).append(" ");
                 }
                 
-                if (!"0".equals(province) && !province.isEmpty()) {
-                    province = province.replace("省", "").replace("市", "");
-                    sb.append(province).append(" ");
-                }
-
-                if (!"0".equals(city) && !city.isEmpty()) {
-                    city = city.replace("市", "");
-                    if (!city.equals(province)) {
-                        sb.append(city).append(" ");
-                    }
+                boolean hasCity = !"0".equals(city) && !city.isEmpty();
+                if (hasCity) {
+                    sb.append(city.replace("市", "")).append(" ");
+                } else if (!"0".equals(province) && !province.isEmpty()) {
+                    sb.append(province.replace("省", "").replace("市", "")).append(" ");
                 }
 
                 if (!"0".equals(isp) && !isp.isEmpty()) {
