@@ -5,7 +5,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.InputStream;
-import java.util.Arrays;
 
 public class IpRegionUtils {
     private static Searcher searcher = null;
@@ -23,7 +22,7 @@ public class IpRegionUtils {
     }
 
     /**
-     * 解析 IP 返回格式化后的地址（如：中国 浙江省 杭州市 电信）
+     * 解析 IP 返回格式化后的地址（如：浙江 杭州 (电信)）
      */
     public static String getRegion(String ip) {
         if (ip == null || ip.trim().isEmpty() || searcher == null) {
@@ -34,17 +33,36 @@ public class IpRegionUtils {
         }
         try {
             String region = searcher.search(ip);
-            // 默认格式：国家|区域|省份|城市|ISP，例如：中国|0|浙江省|杭州市|电信
             if (region != null) {
-                // 替换掉 0 和 |
                 String[] parts = region.split("\\|");
+                String country = parts.length > 0 ? parts[0] : "";
+                String province = parts.length > 1 ? parts[1] : "";
+                String city = parts.length > 2 ? parts[2] : "";
+                String isp = parts.length > 3 ? parts[3] : "";
+
                 StringBuilder sb = new StringBuilder();
-                for (String part : parts) {
-                    if (!"0".equals(part) && !part.isEmpty()) {
-                        sb.append(part).append(" ");
+                if (!"中国".equals(country) && !"0".equals(country) && !country.isEmpty()) {
+                    sb.append(country).append(" ");
+                }
+                
+                if (!"0".equals(province) && !province.isEmpty()) {
+                    province = province.replace("省", "").replace("市", "");
+                    sb.append(province).append(" ");
+                }
+
+                if (!"0".equals(city) && !city.isEmpty()) {
+                    city = city.replace("市", "");
+                    if (!city.equals(province)) {
+                        sb.append(city).append(" ");
                     }
                 }
-                return sb.toString().trim();
+
+                if (!"0".equals(isp) && !isp.isEmpty()) {
+                    sb.append("(").append(isp).append(")");
+                }
+                
+                String res = sb.toString().trim();
+                return res.isEmpty() ? "未知" : res;
             }
         } catch (Exception e) {
             // 解析失败（例如 IPv6 或不合法 IP）
