@@ -23,11 +23,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
 import com.shirongbao.hirongbaohub.entity.SiteProfile;
-import com.shirongbao.hirongbaohub.util.PosterGeneratorUtil;
 import com.shirongbao.hirongbaohub.entity.SitePostMedia;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.MediaType;
-import org.springframework.http.HttpHeaders;
 
 
 @Tag(name = "HirongbaoHub \u52a8\u6001\u53d1\u5e03\u63a5\u53e3", description = "\u4f9b\u5916\u90e8 Agent \u8c03\u7528\u7684\u52a8\u6001\u53d1\u5e03 API\u3002\u4f7f\u7528 HIRONGBAOHUB \u7c7b\u578b\u7684 Token \u8fdb\u884c\u9274\u6743\u3002\n\n"
@@ -97,44 +93,5 @@ public class PublicHirongbaoHubController {
         return ApiResponse.success(postService.create(request));
     }
 
-    @Operation(summary = "生成动态分享海报", description = "获取特定动态的分享海报图片")
-    @GetMapping("/post/{postId}/poster")
-    public ResponseEntity<byte[]> generatePoster(@PathVariable Long postId) {
-        try {
-            SitePost post = postService.getPublishedPost(postId);
-            if (post == null) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            SiteProfile profile = profileService.adminProfile();
-            String authorName = profile != null ? profile.getName() : "hirongbao";
-            String avatarUrl = profile != null ? profile.getAvatarUrl() : "";
-            
-            String coverUrl = null;
-            if (post.getMedia() != null) {
-                for (SitePostMedia m : post.getMedia()) {
-                    if ("image".equals(m.getMediaType())) {
-                        coverUrl = m.getMediaUrl();
-                        break;
-                    }
-                }
-            }
-            
-            byte[] imageBytes = PosterGeneratorUtil.generatePoster(
-                authorName, 
-                avatarUrl, 
-                post.getContent(), 
-                coverUrl, 
-                String.valueOf(postId)
-            );
-            
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.IMAGE_PNG);
-            headers.setCacheControl("public, max-age=86400");
-            return new ResponseEntity<>(imageBytes, headers, org.springframework.http.HttpStatus.OK);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
+
 }
