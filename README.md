@@ -53,7 +53,7 @@ java -jar servicehub-admin/target/servicehub-admin-*.jar
 
 推送 `main` 后，GitHub Actions 自动在云端编译打包 JAR，并通过 SCP 直传服务器完成发布与健康检查。
 
-生产环境 `.env` 位于服务器 `/opt/apps/servicehub/shared/.env`，不要提交到仓库。
+生产环境 `.env` 位于服务器 `/opt/apps/servicehub/shared/.env`，不要提交到仓库。SMTP 配置同样仅能写在 `.env` 中：`MAIL_HOST`、`MAIL_PORT`、`MAIL_USERNAME`、`MAIL_PASSWORD`。本地可参考 `servicehub-admin/.env.example`。
 
 ## 约定
 
