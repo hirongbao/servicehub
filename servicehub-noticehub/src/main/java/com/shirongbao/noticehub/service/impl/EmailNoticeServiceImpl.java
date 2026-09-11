@@ -153,56 +153,74 @@ public class EmailNoticeServiceImpl implements NoticeService {
     @Async
     @Override
     public void sendNewCommentNotification(String email, String postTitle, String author, String commentContent, String ipAddress) {
-        String subject = "[NoticeHub] 新评论待审核: " + postTitle;
+        String subject = "🔔 新评论待审核: " + postTitle;
+        String avatarChar = (author != null && !author.isEmpty()) ? author.substring(0, 1).toUpperCase() : "?";
+        String ipStr = (ipAddress != null && !ipAddress.isEmpty()) ? ipAddress : "未知IP";
+        
         String content = "<!DOCTYPE html>\n" +
                 "<html lang=\"zh-CN\">\n" +
                 "<head>\n" +
                 "    <meta charset=\"UTF-8\">\n" +
-                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
                 "</head>\n" +
-                "<body style=\"margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\">\n" +
-                "    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"padding: 40px 0; background-color: #f4f4f5;\">\n" +
+                "<body style=\"margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\">\n" +
+                "    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"padding: 60px 0; background-color: #f9fafb;\">\n" +
                 "        <tr>\n" +
                 "            <td align=\"center\">\n" +
-                "                <table width=\"500\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; margin: 0 20px;\">\n" +
+                "                <table width=\"540\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); overflow: hidden; margin: 0 20px;\">\n" +
                 "                    <tr>\n" +
-                "                        <td style=\"padding: 30px 40px; border-bottom: 1px solid #f4f4f5; background-color: #fafafa;\">\n" +
-                "                            <div style=\"font-size: 14px; font-weight: 700; color: #18181b; letter-spacing: 1px; text-transform: uppercase;\">NoticeHub / 审核中心</div>\n" +
-                "                        </td>\n" +
+                "                        <td style=\"height: 4px; background: linear-gradient(90deg, #111827, #6b7280);\"></td>\n" +
                 "                    </tr>\n" +
                 "                    <tr>\n" +
-                "                        <td style=\"padding: 40px;\">\n" +
-                "                            <h2 style=\"margin: 0 0 24px 0; font-size: 20px; color: #18181b; font-weight: 600; border-left: 4px solid #18181b; padding-left: 12px;\">新访客评论</h2>\n" +
-                "                            <p style=\"margin: 0 0 24px 0; font-size: 14px; color: #52525b; line-height: 1.6;\">\n" +
-                "                                您的网站动态 <strong style=\"color: #18181b;\">" + postTitle + "</strong> 收到了一条新评论，需等待您的审核。\n" +
+                "                        <td style=\"padding: 40px 40px 32px 40px;\">\n" +
+                "                            <div style=\"font-size: 12px; font-weight: 700; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px;\">\n" +
+                "                                NoticeHub / 审 核 中 心 提 示\n" +
+                "                            </div>\n" +
+                "                            <h2 style=\"margin: 0 0 24px 0; font-size: 22px; color: #111827; font-weight: 600; letter-spacing: -0.5px;\">\n" +
+                "                                有新的访客评论待处理\n" +
+                "                            </h2>\n" +
+                "                            <p style=\"margin: 0 0 32px 0; font-size: 15px; color: #4b5563; line-height: 1.6;\">\n" +
+                "                                您的动态 <strong style=\"color: #111827; font-weight: 600;\">" + postTitle + "</strong> 刚刚收到了一条新评论，系统已自动拦截，等待您的审核放行。\n" +
                 "                            </p>\n" +
-                "                            <div style=\"background-color: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #e4e4e7;\">\n" +
+                "                            <div style=\"background-color: #f3f4f6; border-radius: 12px; padding: 24px; margin-bottom: 32px;\">\n" +
                 "                                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n" +
                 "                                    <tr>\n" +
-                "                                        <td width=\"60\" style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">访客</td>\n" +
-                "                                        <td style=\"font-size: 14px; font-weight: 600; color: #18181b; padding-bottom: 12px;\">" + author + "</td>\n" +
-                "                                    </tr>\n" +
-                "                                    <tr>\n" +
-                "                                        <td style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">内容</td>\n" +
-                "                                        <td style=\"font-size: 14px; font-weight: 400; color: #52525b; line-height: 1.6; padding-bottom: 12px;\">\n" +
-                "                                            " + commentContent.replace("\n", "<br>") + "\n" +
+                "                                        <td width=\"44\" valign=\"middle\">\n" +
+                "                                            <div style=\"width: 32px; height: 32px; border-radius: 16px; background-color: #d1d5db; text-align: center; line-height: 32px; font-size: 14px; color: #4b5563; font-weight: bold; overflow: hidden;\">\n" +
+                "                                                " + avatarChar + "\n" +
+                "                                            </div>\n" +
+                "                                        </td>\n" +
+                "                                        <td valign=\"middle\">\n" +
+                "                                            <div style=\"font-size: 15px; font-weight: 600; color: #111827;\">" + author + "</div>\n" +
+                "                                            <div style=\"font-size: 12px; color: #6b7280; font-family: ui-monospace, monospace; margin-top: 2px;\">IP: " + ipStr + "</div>\n" +
                 "                                        </td>\n" +
                 "                                    </tr>\n" +
                 "                                    <tr>\n" +
-                "                                        <td style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">IP</td>\n" +
-                "                                        <td style=\"font-size: 13px; font-weight: 500; color: #a1a1aa; font-family: monospace;\">" + (ipAddress != null ? ipAddress : "未知") + "</td>\n" +
+                "                                        <td colspan=\"2\" style=\"padding-top: 16px; border-bottom: 1px solid #e5e7eb;\"></td>\n" +
+                "                                    </tr>\n" +
+                "                                    <tr>\n" +
+                "                                        <td colspan=\"2\" style=\"padding-top: 16px;\">\n" +
+                "                                            <div style=\"font-size: 15px; color: #374151; line-height: 1.6;\">\n" +
+                "                                                " + commentContent.replace("\n", "<br>") + "\n" +
+                "                                            </div>\n" +
+                "                                        </td>\n" +
                 "                                    </tr>\n" +
                 "                                </table>\n" +
                 "                            </div>\n" +
-                "                            <div style=\"text-align: center;\">\n" +
-                "                                <a href=\"https://admin.hirongbao.com\" style=\"display: inline-block; padding: 12px 32px; background-color: #18181b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;\">前往后台审核</a>\n" +
-                "                            </div>\n" +
+                "                            <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n" +
+                "                                <tr>\n" +
+                "                                    <td align=\"left\">\n" +
+                "                                        <a href=\"https://admin.hirongbao.com\" style=\"display: inline-block; padding: 14px 28px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n" +
+                "                                            登录后台审核\n" +
+                "                                        </a>\n" +
+                "                                    </td>\n" +
+                "                                </tr>\n" +
+                "                            </table>\n" +
                 "                        </td>\n" +
                 "                    </tr>\n" +
                 "                    <tr>\n" +
-                "                        <td style=\"background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f4f4f5;\">\n" +
-                "                            <p style=\"margin: 0; font-size: 12px; color: #a1a1aa;\">\n" +
-                "                                内部管理通知由 <strong style=\"color: #71717a;\">NoticeHub</strong> 自动投递。\n" +
+                "                        <td style=\"background-color: #f9fafb; border-top: 1px solid #f3f4f6; padding: 24px 40px;\">\n" +
+                "                            <p style=\"margin: 0; font-size: 12px; color: #9ca3af; text-align: center;\">\n" +
+                "                                本安全通知由底层监控服务 <strong style=\"color: #6b7280;\">NoticeHub</strong> 发出。<br>系统自动生成，请勿回复。\n" +
                 "                            </p>\n" +
                 "                        </td>\n" +
                 "                    </tr>\n" +
