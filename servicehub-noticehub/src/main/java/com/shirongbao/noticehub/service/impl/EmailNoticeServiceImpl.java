@@ -150,6 +150,71 @@ public class EmailNoticeServiceImpl implements NoticeService {
         sendHtmlEmail(email, subject, content);
     }
 
+    @Async
+    @Override
+    public void sendNewCommentNotification(String email, String postTitle, String author, String commentContent, String ipAddress) {
+        String subject = "[NoticeHub] 新评论待审核: " + postTitle;
+        String content = "<!DOCTYPE html>\n" +
+                "<html lang=\"zh-CN\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "</head>\n" +
+                "<body style=\"margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\">\n" +
+                "    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"padding: 40px 0; background-color: #f4f4f5;\">\n" +
+                "        <tr>\n" +
+                "            <td align=\"center\">\n" +
+                "                <table width=\"500\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; margin: 0 20px;\">\n" +
+                "                    <tr>\n" +
+                "                        <td style=\"padding: 30px 40px; border-bottom: 1px solid #f4f4f5; background-color: #fafafa;\">\n" +
+                "                            <div style=\"font-size: 14px; font-weight: 700; color: #18181b; letter-spacing: 1px; text-transform: uppercase;\">NoticeHub / 审核中心</div>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                    <tr>\n" +
+                "                        <td style=\"padding: 40px;\">\n" +
+                "                            <h2 style=\"margin: 0 0 24px 0; font-size: 20px; color: #18181b; font-weight: 600; border-left: 4px solid #18181b; padding-left: 12px;\">新访客评论</h2>\n" +
+                "                            <p style=\"margin: 0 0 24px 0; font-size: 14px; color: #52525b; line-height: 1.6;\">\n" +
+                "                                您的网站动态 <strong style=\"color: #18181b;\">" + postTitle + "</strong> 收到了一条新评论，需等待您的审核。\n" +
+                "                            </p>\n" +
+                "                            <div style=\"background-color: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #e4e4e7;\">\n" +
+                "                                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n" +
+                "                                    <tr>\n" +
+                "                                        <td width=\"60\" style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">访客</td>\n" +
+                "                                        <td style=\"font-size: 14px; font-weight: 600; color: #18181b; padding-bottom: 12px;\">" + author + "</td>\n" +
+                "                                    </tr>\n" +
+                "                                    <tr>\n" +
+                "                                        <td style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">内容</td>\n" +
+                "                                        <td style=\"font-size: 14px; font-weight: 400; color: #52525b; line-height: 1.6; padding-bottom: 12px;\">\n" +
+                "                                            " + commentContent.replace("\n", "<br>") + "\n" +
+                "                                        </td>\n" +
+                "                                    </tr>\n" +
+                "                                    <tr>\n" +
+                "                                        <td style=\"font-size: 13px; color: #a1a1aa; vertical-align: top;\">IP</td>\n" +
+                "                                        <td style=\"font-size: 13px; font-weight: 500; color: #a1a1aa; font-family: monospace;\">" + (ipAddress != null ? ipAddress : "未知") + "</td>\n" +
+                "                                    </tr>\n" +
+                "                                </table>\n" +
+                "                            </div>\n" +
+                "                            <div style=\"text-align: center;\">\n" +
+                "                                <a href=\"https://admin.hirongbao.com\" style=\"display: inline-block; padding: 12px 32px; background-color: #18181b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;\">前往后台审核</a>\n" +
+                "                            </div>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                    <tr>\n" +
+                "                        <td style=\"background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f4f4f5;\">\n" +
+                "                            <p style=\"margin: 0; font-size: 12px; color: #a1a1aa;\">\n" +
+                "                                内部管理通知由 <strong style=\"color: #71717a;\">NoticeHub</strong> 自动投递。\n" +
+                "                            </p>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                </table>\n" +
+                "            </td>\n" +
+                "        </tr>\n" +
+                "    </table>\n" +
+                "</body>\n" +
+                "</html>";
+        sendHtmlEmail(email, subject, content);
+    }
+
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

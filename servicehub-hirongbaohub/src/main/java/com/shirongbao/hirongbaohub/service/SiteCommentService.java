@@ -9,6 +9,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.mapper.SiteCommentMapper;
+import com.shirongbao.noticehub.service.NoticeService;
+import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
+import com.shirongbao.hirongbaohub.entity.SitePost;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,10 +21,14 @@ import java.util.stream.Collectors;
 @Service
 public class SiteCommentService {
     private final SiteCommentMapper mapper;
+    private final NoticeService noticeService;
+    private final SitePostMapper postMapper;
 
     // 初始化评论业务服务
-    public SiteCommentService(SiteCommentMapper mapper) {
+    public SiteCommentService(SiteCommentMapper mapper, NoticeService noticeService, SitePostMapper postMapper) {
         this.mapper = mapper;
+        this.noticeService = noticeService;
+        this.postMapper = postMapper;
     }
 
     // 批量填充动态的评论列表（按时间正序）
@@ -47,11 +54,25 @@ public class SiteCommentService {
     public SiteComment add(Long postId, CommentCreateRequest request, String ipAddress) {
         SiteComment comment = new SiteComment();
         comment.setPostId(postId);
-        comment.setAuthor(request.author() == null || request.author().isBlank() ? "访客" : request.author().trim());
+        String authorName = request.author() == null || request.author().isBlank() ? "访客" : request.author().trim();
+        comment.setAuthor(authorName);
         comment.setIpAddress(ipAddress != null && ipAddress.length() > 45 ? ipAddress.substring(0, 45) : ipAddress);
-        comment.setContent(request.content().trim());
+        String commentContent = request.content().trim();
+        comment.setContent(commentContent);
         comment.setStatus(0); // 0: pending
         mapper.insert(comment);
+        
+        try {
+            SitePost post = postMapper.selectById(postId);
+            String postTitle = post != null && post.getContent() != null ? post.getContent() : "未知动态";
+            if (postTitle.length() > 30) {
+                postTitle = postTitle.substring(0, 30) + "...";
+            }
+            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, authorName, commentContent, ipAddress);
+        } catch (Exception e) {
+            System.err.println("发送评论审核通知失败: " + e.getMessage());
+        }
+        
         return comment;
     }
 
