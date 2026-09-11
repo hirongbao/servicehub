@@ -28,18 +28,39 @@ public class PosterGeneratorUtil {
     private static final int WIDTH = 800;
     private static final int PADDING = 64;
 
-    private static BufferedImage downloadImage(String urlStr) {
+        private static BufferedImage downloadImage(String urlStr) {
         if (urlStr == null || urlStr.isEmpty()) return null;
         try {
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(3000); // 3秒连接超时
-            conn.setReadTimeout(5000);    // 5秒读取超时
+            conn.setConnectTimeout(3000); 
+            conn.setReadTimeout(5000);    
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             conn.connect();
             if (conn.getResponseCode() == 200) {
-                try (InputStream is = conn.getInputStream()) {
-                    return ImageIO.read(is);
+                try (InputStream is = conn.getInputStream();
+                     javax.imageio.stream.ImageInputStream iis = ImageIO.createImageInputStream(is)) {
+                    java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(iis);
+                    if (!readers.hasNext()) return null;
+                    
+                    javax.imageio.ImageReader reader = readers.next();
+                    reader.setInput(iis, true, true);
+                    
+                    int width = reader.getWidth(0);
+                    int height = reader.getHeight(0);
+                    
+                    javax.imageio.ImageReadParam param = reader.getDefaultReadParam();
+                    int subsampling = 1;
+                    if (width > 2000 || height > 2000) {
+                        subsampling = Math.max(width / 1000, height / 1000);
+                    }
+                    if (subsampling > 1) {
+                        param.setSourceSubsampling(subsampling, subsampling, 0, 0);
+                    }
+                    
+                    BufferedImage img = reader.read(0, param);
+                    reader.dispose();
+                    return img;
                 }
             }
         } catch (Exception e) {
