@@ -51,12 +51,12 @@ public class EmailNoticeServiceImpl implements NoticeService {
                 "                                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n" +
                 "                                    <tr>\n" +
                 "                                        <td width=\"80\" style=\"font-size: 13px; color: #a1a1aa;\">业务来源</td>\n" +
-                "                                        <td style=\"font-size: 14px; font-weight: 600; color: #18181b;\">" + siteName + ".com</td>\n" +
+                "                                        <td style=\"font-size: 14px; font-weight: 600; color: #18181b;\"><a href=\"https://" + siteName + ".com\" style=\"color: #18181b; text-decoration: none; border-bottom: 1px dashed #a1a1aa; padding-bottom: 2px;\" target=\"_blank\">" + siteName + ".com</a></td>\n" +
                 "                                    </tr>\n" +
                 "                                    <tr><td colspan=\"2\" style=\"height: 12px;\"></td></tr>\n" +
                 "                                    <tr>\n" +
                 "                                        <td style=\"font-size: 13px; color: #a1a1aa;\">平台环境</td>\n" +
-                "                                        <td style=\"font-size: 14px; font-weight: 500; color: #52525b;\">" + siteName + " 官方网站</td>\n" +
+                "                                        <td style=\"font-size: 14px; font-weight: 500; color: #52525b;\"><a href=\"https://" + siteName + ".com\" style=\"color: #52525b; text-decoration: none;\" target=\"_blank\">" + siteName + " 官方网站</a></td>\n" +
                 "                                    </tr>\n" +
                 "                                </table>\n" +
                 "                            </div>\n" +
