@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import com.shirongbao.common.utils.IpRegionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -185,6 +186,130 @@ public class LogController {
         stats.put("latencyDistribution", latencyDist);
 
         return ApiResponse.success(stats);
+    }
+
+    // 获取指定 IP 的聚合统计数据（概览、状态码、Top Path、时间分布）
+    @GetMapping("/access/ip/{ip}/stats")
+    public ApiResponse<Map<String, Object>> ipStats(
+            @PathVariable String ip,
+            @RequestParam(defaultValue = "24h") String range) {
+
+        String interval = "24h".equals(range) ? "24" : "168";
+        String timeBucket = "24h".equals(range)
+                ? "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i')" // per-minute for 24h, grouped later
+                : "DATE_FORMAT(created_at, '%Y-%m-%d %H:00')";
+        // For 24h use 5-minute buckets; for 7d use 1-hour buckets
+        String timeBucketExpr = "24h".equals(range)
+                ? "CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(FLOOR(MINUTE(created_at)/5)*5, 2, '0'))"
+                : "DATE_FORMAT(created_at, '%Y-%m-%d %H:00')";
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // Summary
+        Map<String, Object> summary = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total_requests, " +
+                "SUM(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 ELSE 0 END) AS success_count, " +
+                "SUM(CASE WHEN status_code >= 400 AND status_code < 500 THEN 1 ELSE 0 END) AS error_4xx, " +
+                "SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END) AS error_5xx, " +
+                "ROUND(AVG(cost_ms), 1) AS avg_cost_ms, " +
+                "MAX(cost_ms) AS max_cost_ms, " +
+                "COUNT(DISTINCT path) AS unique_paths, " +
+                "MIN(created_at) AS first_seen, " +
+                "MAX(created_at) AS last_seen " +
+                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR)",
+                ip);
+        result.put("summary", summary);
+
+        // Region
+        result.put("region", IpRegionUtils.getRegion(ip));
+
+        // Status distribution
+        List<Map<String, Object>> statusDist = jdbcTemplate.queryForList(
+                "SELECT CASE " +
+                "WHEN status_code >= 200 AND status_code < 300 THEN '2xx' " +
+                "WHEN status_code >= 300 AND status_code < 400 THEN '3xx' " +
+                "WHEN status_code >= 400 AND status_code < 500 THEN '4xx' " +
+                "WHEN status_code >= 500 THEN '5xx' ELSE 'other' END AS status_group, " +
+                "COUNT(*) AS count " +
+                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "GROUP BY status_group ORDER BY status_group",
+                ip);
+        result.put("statusDistribution", statusDist);
+
+        // Top paths with error count
+        List<Map<String, Object>> topPaths = jdbcTemplate.queryForList(
+                "SELECT path, COUNT(*) AS count, " +
+                "ROUND(AVG(cost_ms), 1) AS avg_ms, " +
+                "SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) AS error_count " +
+                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "GROUP BY path ORDER BY count DESC LIMIT 20",
+                ip);
+        result.put("topPaths", topPaths);
+
+        // Time distribution (5min buckets for 24h, 1h buckets for 7d)
+        List<Map<String, Object>> timeDist = jdbcTemplate.queryForList(
+                "SELECT " + timeBucketExpr + " AS time_bucket, COUNT(*) AS count " +
+                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "GROUP BY time_bucket ORDER BY time_bucket",
+                ip);
+        result.put("timeDistribution", timeDist);
+
+        return ApiResponse.success(result);
+    }
+
+    // 分页查询指定 IP 的访问时间线
+    @GetMapping("/access/ip/{ip}")
+    public ApiResponse<Map<String, Object>> ipAccessLogs(
+            @PathVariable String ip,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "24h") String range,
+            @RequestParam(required = false) String method,
+            @RequestParam(required = false) String path,
+            @RequestParam(required = false) String statusGroup) {
+
+        size = Math.max(1, Math.min(size, 200));
+        int offset = (Math.max(1, page) - 1) * size;
+        String interval = "24h".equals(range) ? "24" : "168";
+
+        StringBuilder where = new StringBuilder("WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR)");
+        List<Object> params = new ArrayList<>();
+        params.add(ip);
+
+        if (method != null && !method.isBlank()) {
+            where.append(" AND method = ?");
+            params.add(method.trim().toUpperCase());
+        }
+        if (path != null && !path.isBlank()) {
+            where.append(" AND path LIKE ?");
+            params.add("%" + path.trim() + "%");
+        }
+        if (statusGroup != null && !statusGroup.isBlank()) {
+            switch (statusGroup) {
+                case "2xx" -> where.append(" AND status_code >= 200 AND status_code < 300");
+                case "3xx" -> where.append(" AND status_code >= 300 AND status_code < 400");
+                case "4xx" -> where.append(" AND status_code >= 400 AND status_code < 500");
+                case "5xx" -> where.append(" AND status_code >= 500");
+            }
+        }
+
+        String countSql = "SELECT COUNT(*) FROM access_log " + where;
+        Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
+
+        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, created_at FROM access_log "
+                + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
+        List<Object> dataParams = new ArrayList<>(params);
+        dataParams.add(size);
+        dataParams.add(offset);
+
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(dataSql, dataParams.toArray());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("list", list);
+        result.put("total", total != null ? total : 0);
+        result.put("page", page);
+        result.put("size", size);
+        return ApiResponse.success(result);
     }
 
     // 读取后端运行日志文件尾部内容
