@@ -15,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 
 @RestController
 public class RedirectController {
@@ -46,5 +49,33 @@ public class RedirectController {
                 .header("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
                 .location(java.net.URI.create(link.getTargetUrl()))
                 .build();
+    }
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    // 专为 GitHub README 等不支持 302 跳转的严格代理系统设计的图片透传接口
+    @GetMapping({"/s/img/{code}", "/s/img/{code}.png", "/s/img/{code}.jpg", "/s/img/{code}.gif", "/s/img/{code}.svg"})
+    public ResponseEntity<byte[]> proxyImage(@PathVariable String code, HttpServletRequest request) {
+        ShortLink link = service.resolve(code);
+        if (link == null) {
+            return ResponseEntity.notFound().build();
+        }
+        service.recordVisit(link.getId(), request.getHeader("Referer"), request.getHeader("User-Agent"), IpUtils.getClientIp(request));
+        
+        try {
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    link.getTargetUrl(), HttpMethod.GET, null, byte[].class);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setCacheControl("no-cache, no-store, max-age=0, must-revalidate");
+            if (response.getHeaders().getContentType() != null) {
+                headers.setContentType(response.getHeaders().getContentType());
+            } else {
+                headers.setContentType(MediaType.IMAGE_JPEG);
+            }
+            return new ResponseEntity<>(response.getBody(), headers, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
