@@ -59,10 +59,10 @@ public class FileRecordService {
         }
 
         if (customKey != null && !customKey.isBlank()) {
-            // 固定 URL 模式：直接基于自定义 Key 生成 objectKey
-            String objectKey = "fixed/" + customKey.trim().replaceAll("^/+", "");
-            // 为了防止和普通上传记录的唯一 Hash 冲突，这里对自定义 Key 的文件做专属 Hash 处理
-            String uniqueHash = hash + "_" + customKey.trim();
+            // 固定 URL 模式：完全由用户决定路径（去掉前缀 fixed/）
+            String objectKey = customKey.trim().replaceAll("^/+", "");
+            // 为了防止和普通上传记录的唯一 Hash 冲突，这里对自定义 Key 的文件做专属 Hash 处理（再做一次 Hash 保证 64 位长度，防止超长报错）
+            String uniqueHash = ContentHash.of((hash + "_" + customKey.trim()).getBytes());
 
             cos.upload(file, customKey);
 

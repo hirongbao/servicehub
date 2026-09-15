@@ -44,7 +44,7 @@ public class CosStorageService {
     public String upload(MultipartFile file, String customKey) {
         String objectKey;
         if (customKey != null && !customKey.isBlank()) {
-            objectKey = "fixed/" + customKey.trim().replaceAll("^/+", "");
+            objectKey = customKey.trim().replaceAll("^/+", "");
         } else {
             objectKey = "images/" + UUID.randomUUID() + getExtension(file.getOriginalFilename());
         }
