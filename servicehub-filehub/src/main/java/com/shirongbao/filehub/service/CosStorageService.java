@@ -40,9 +40,14 @@ public class CosStorageService {
         this.domain = domain;
     }
 
-    // 上传图片到腾讯 COS
-    public String upload(MultipartFile file) {
-        String objectKey = "images/" + UUID.randomUUID() + getExtension(file.getOriginalFilename());
+    // 上传图片到腾讯 COS（支持自定义固定 Key）
+    public String upload(MultipartFile file, String customKey) {
+        String objectKey;
+        if (customKey != null && !customKey.isBlank()) {
+            objectKey = "fixed/" + customKey.trim().replaceAll("^/+", "");
+        } else {
+            objectKey = "images/" + UUID.randomUUID() + getExtension(file.getOriginalFilename());
+        }
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());
         metadata.setContentType(file.getContentType());

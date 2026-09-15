@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,11 +44,12 @@ public class PublicFileHubController {
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ApiResponse<FileRecord> upload(
             @Parameter(description = "媒体文件") @RequestPart("file") MultipartFile file,
+            @Parameter(description = "自定义固定标识（非必填，填入可固定最终 URL 不变）") @RequestParam(required = false) String customKey,
             @Parameter(hidden = true) HttpServletRequest request,
             @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
             @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(request, serviceToken, authorization, "upload");
-        return ApiResponse.success(service.upload(file));
+        return ApiResponse.success(service.upload(file, customKey));
     }
 
     // 校验服务 Token 并记录使用日志

@@ -46,8 +46,8 @@ public class FileRecordService {
     // 统计文件记录总数
     public long countAll() { return mapper.selectCount(null); }
 
-    // 校验并上传图片文件，内容重复时自动校正为加速域名并返回已有记录
-    public FileRecord upload(MultipartFile file) {
+    // 校验并上传图片文件，支持自定义固定标识实现覆盖和 URL 不变
+    public FileRecord upload(MultipartFile file, String customKey) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");
         if (file.getSize() > maxSize) throw new IllegalArgumentException("图片大小不能超过 10MB");
         if (!ALLOWED_TYPES.contains(file.getContentType())) throw new IllegalArgumentException("只允许上传 JPG、PNG、GIF 或 WEBP 图片");
@@ -57,6 +57,39 @@ public class FileRecordService {
         } catch (IOException e) {
             throw new IllegalStateException("读取上传文件失败", e);
         }
+
+        if (customKey != null && !customKey.isBlank()) {
+            // 固定 URL 模式：直接基于自定义 Key 生成 objectKey
+            String objectKey = "fixed/" + customKey.trim().replaceAll("^/+", "");
+            // 为了防止和普通上传记录的唯一 Hash 冲突，这里对自定义 Key 的文件做专属 Hash 处理
+            String uniqueHash = hash + "_" + customKey.trim();
+
+            cos.upload(file, customKey);
+
+            FileRecord existingByKey = mapper.selectOne(new QueryWrapper<FileRecord>().eq("object_key", objectKey));
+            if (existingByKey != null) {
+                // 原有的记录存在，直接覆盖更新属性
+                existingByKey.setContentHash(uniqueHash);
+                existingByKey.setFileSize(file.getSize());
+                existingByKey.setContentType(file.getContentType());
+                existingByKey.setFileUrl(cos.publicUrl(objectKey));
+                mapper.updateById(existingByKey);
+                return existingByKey;
+            } else {
+                // 全新固定 URL 图片
+                FileRecord record = new FileRecord();
+                record.setOriginalName(file.getOriginalFilename() == null || file.getOriginalFilename().isBlank() ? "image" : file.getOriginalFilename());
+                record.setObjectKey(objectKey);
+                record.setFileUrl(cos.publicUrl(objectKey));
+                record.setContentType(file.getContentType());
+                record.setContentHash(uniqueHash);
+                record.setFileSize(file.getSize());
+                record.setStatus(1);
+                mapper.insert(record);
+                return record;
+            }
+        }
+
         FileRecord existing = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
         if (existing != null) {
             String expectedUrl = cos.publicUrl(existing.getObjectKey());
@@ -66,7 +99,7 @@ public class FileRecordService {
             }
             return existing;
         }
-        String objectKey = cos.upload(file);
+        String objectKey = cos.upload(file, null);
         FileRecord record = new FileRecord();
         record.setOriginalName(file.getOriginalFilename() == null || file.getOriginalFilename().isBlank() ? "image" : file.getOriginalFilename());
         record.setObjectKey(objectKey);
