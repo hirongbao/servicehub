@@ -15,6 +15,7 @@ import com.shirongbao.linkhub.service.ShortLinkService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -52,6 +53,22 @@ public class PublicLinkController {
                                          @Parameter(description = "标准凭证") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(httpRequest, serviceToken, authorization, "create");
         ShortLink link = service.create(request);
+        link.setTargetUrl(service.fullUrl(link.getCode(), httpRequest));
+        return ApiResponse.success(link);
+    }
+
+    // 使用 LINKHUB Token 更新短链目标地址
+    @Operation(summary = "更新短链", description = "修改已有短链的目标地址。")
+    @SecurityRequirement(name = "X-Service-Token")
+    @SecurityRequirement(name = "BearerAuth")
+    @PutMapping("/links/{code}")
+    public ApiResponse<ShortLink> update(@Parameter(description = "短链代码") @PathVariable String code,
+                                         @Valid @RequestBody LinkCreateRequest request,
+                                         @Parameter(hidden = true) HttpServletRequest httpRequest,
+                                         @Parameter(description = "访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+                                         @Parameter(description = "标准凭证") @RequestHeader(value = "Authorization", required = false) String authorization) {
+        recordUsage(httpRequest, serviceToken, authorization, "update");
+        ShortLink link = service.updateTarget(code, request.targetUrl());
         link.setTargetUrl(service.fullUrl(link.getCode(), httpRequest));
         return ApiResponse.success(link);
     }

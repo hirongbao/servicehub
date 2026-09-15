@@ -125,6 +125,21 @@ public class ShortLinkService {
         visitMapper.insert(visit);
     }
 
+    // 更新短链目标地址
+    public ShortLink updateTarget(String code, String targetUrl) {
+        ShortLink link = mapper.selectOne(new QueryWrapper<ShortLink>().eq("code", code));
+        if (link == null) {
+            throw new IllegalArgumentException("短链不存在");
+        }
+        String target = targetUrl.trim();
+        if (!target.matches("^https?://\\S{1,2000}$")) {
+            throw new IllegalArgumentException("目标链接必须以 http:// 或 https:// 开头");
+        }
+        link.setTargetUrl(target);
+        mapper.updateById(link);
+        return link;
+    }
+
     // 更新短链状态
     public ShortLink updateStatus(Long id, Integer status) {
         ShortLink link = mapper.selectById(id);

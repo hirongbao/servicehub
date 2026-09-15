@@ -43,6 +43,7 @@ public class RedirectController {
         }
         service.recordVisit(link.getId(), request.getHeader("Referer"), request.getHeader("User-Agent"), IpUtils.getClientIp(request));
         return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
                 .location(java.net.URI.create(link.getTargetUrl()))
                 .build();
     }
