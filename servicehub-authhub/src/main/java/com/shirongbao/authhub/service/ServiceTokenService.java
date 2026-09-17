@@ -6,6 +6,7 @@
 package com.shirongbao.authhub.service;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.authhub.constant.TokenType;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -36,6 +37,49 @@ public class ServiceTokenService {
     public ServiceTokenService(ServiceTokenMapper mapper, TokenUsageLogMapper usageLogMapper) {
         this.mapper = mapper;
         this.usageLogMapper = usageLogMapper;
+    }
+
+    // 分页查询服务 Token，并附带使用统计与过滤（默认不查不可用）
+    public IPage<ServiceToken> page(int current, int size, String keyword, String tokenType, String statusFilter) {
+        QueryWrapper<ServiceToken> query = new QueryWrapper<ServiceToken>().orderByDesc("created_at");
+        LocalDateTime now = LocalDateTime.now();
+
+        // 权限域筛选
+        if (StringUtils.isNotBlank(tokenType) && !"ALL".equalsIgnoreCase(tokenType)) {
+            query.eq("token_type", tokenType.toUpperCase());
+        }
+
+        // 状态筛选：默认 active（仅查可用：启用且未过期）
+        if ("active".equalsIgnoreCase(statusFilter) || StringUtils.isBlank(statusFilter)) {
+            query.eq("status", 1)
+                 .and(w -> w.isNull("expires_at").or().gt("expires_at", now));
+        } else if ("disabled".equalsIgnoreCase(statusFilter)) {
+            query.eq("status", 0);
+        } else if ("expired".equalsIgnoreCase(statusFilter)) {
+            query.isNotNull("expires_at").le("expires_at", now);
+        } else if ("inactive".equalsIgnoreCase(statusFilter)) {
+            query.and(w -> w.eq("status", 0).or(w2 -> w2.isNotNull("expires_at").le("expires_at", now)));
+        } // "all" 则不加限制
+
+        if (StringUtils.isNotBlank(keyword)) {
+            String kw = keyword.trim();
+            query.and(w -> w.like("token_name", kw).or().like("token_value", kw));
+        }
+
+        IPage<ServiceToken> pageResult = mapper.selectPage(new Page<>(current, size), query);
+        List<ServiceToken> tokens = pageResult.getRecords();
+        if (!tokens.isEmpty()) {
+            Map<Long, TokenUsageStats> stats = usageLogMapper.selectUsageStats().stream()
+                    .collect(Collectors.toMap(TokenUsageStats::getTokenId, Function.identity()));
+            for (ServiceToken token : tokens) {
+                TokenUsageStats s = stats.get(token.getId());
+                if (s != null) {
+                    token.setUsageCount(s.getUsageCount());
+                    token.setLastUsedAt(s.getLastUsedAt());
+                }
+            }
+        }
+        return pageResult;
     }
 
     // 查询全部服务 Token，并附带使用统计

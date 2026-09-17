@@ -9,7 +9,9 @@ import com.shirongbao.authhub.dto.TokenCreateRequest;
 import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.admin.dto.TokenStatusRequest;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shirongbao.common.response.ApiResponse;
+import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,10 +33,15 @@ public class TokenController {
         this.service = service;
     }
 
-    // 查询服务 Token 列表
+    // 分页并筛选查询服务 Token 列表（默认不查不可用凭证）
     @GetMapping
-    public ApiResponse<List<ServiceToken>> list() {
-        return ApiResponse.success(service.list());
+    public ApiResponse<IPage<ServiceToken>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tokenType,
+            @RequestParam(defaultValue = "active") String status) {
+        return ApiResponse.success(service.page(page, size, keyword, tokenType, status));
     }
 
     // 创建服务 Token

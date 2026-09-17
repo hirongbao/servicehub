@@ -6,6 +6,8 @@
 package com.shirongbao.linkhub.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.linkhub.dto.LinkCreateRequest;
 import com.shirongbao.linkhub.dto.LinkDailyVisit;
 import com.shirongbao.linkhub.dto.LinkLabelVisit;
@@ -44,6 +46,44 @@ public class ShortLinkService {
         this.mapper = mapper;
         this.visitMapper = visitMapper;
         this.baseUrl = baseUrl;
+    }
+
+    // 分页查询短链，并附带访问统计与过滤（默认不查不可用）
+    public IPage<ShortLink> page(int current, int size, String keyword, String statusFilter) {
+        QueryWrapper<ShortLink> query = new QueryWrapper<ShortLink>().orderByDesc("created_at");
+        LocalDateTime now = LocalDateTime.now();
+
+        // 状态筛选：默认 active（仅查可用：启用且未过期）
+        if ("active".equalsIgnoreCase(statusFilter) || StringUtils.isBlank(statusFilter)) {
+            query.eq("status", 1)
+                 .and(w -> w.isNull("expires_at").or().gt("expires_at", now));
+        } else if ("disabled".equalsIgnoreCase(statusFilter)) {
+            query.eq("status", 0);
+        } else if ("expired".equalsIgnoreCase(statusFilter)) {
+            query.isNotNull("expires_at").le("expires_at", now);
+        } else if ("inactive".equalsIgnoreCase(statusFilter)) {
+            query.and(w -> w.eq("status", 0).or(w2 -> w2.isNotNull("expires_at").le("expires_at", now)));
+        } // "all" 则不加限制
+
+        if (StringUtils.isNotBlank(keyword)) {
+            String kw = keyword.trim();
+            query.and(w -> w.like("code", kw).or().like("target_url", kw).or().like("remark", kw));
+        }
+
+        IPage<ShortLink> pageResult = mapper.selectPage(new Page<>(current, size), query);
+        List<ShortLink> links = pageResult.getRecords();
+        if (!links.isEmpty()) {
+            Map<Long, LinkVisitStats> stats = mapper.selectVisitStats().stream()
+                    .collect(Collectors.toMap(LinkVisitStats::getLinkId, Function.identity()));
+            for (ShortLink link : links) {
+                LinkVisitStats s = stats.get(link.getId());
+                if (s != null) {
+                    link.setVisitCount(s.getVisitCount());
+                    link.setLastVisitAt(s.getLastVisitAt());
+                }
+            }
+        }
+        return pageResult;
     }
 
     // 查询全部短链，并附带访问统计

@@ -5,7 +5,9 @@
  */
 package com.shirongbao.linkhub.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shirongbao.common.response.ApiResponse;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.shirongbao.linkhub.dto.LinkCreateRequest;
 import com.shirongbao.linkhub.dto.LinkStatusRequest;
 import com.shirongbao.linkhub.entity.ShortLink;
@@ -33,10 +35,14 @@ public class AdminLinkController {
         this.service = service;
     }
 
-    // 查询短链列表
+    // 分页并筛选查询短链列表（默认不查不可用的短链）
     @GetMapping
-    public ApiResponse<List<ShortLink>> list() {
-        return ApiResponse.success(service.list());
+    public ApiResponse<IPage<ShortLink>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "active") String status) {
+        return ApiResponse.success(service.page(page, size, keyword, status));
     }
 
     // 创建短链
