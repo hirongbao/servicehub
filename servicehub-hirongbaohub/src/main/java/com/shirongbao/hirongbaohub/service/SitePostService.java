@@ -157,9 +157,7 @@ public class SitePostService {
 
     // 生成约三千人的展示在线数，并为每次心跳加入受控抖动
     private int displayOnlineCount(int actual, long totalVisitors) {
-        int activityOffset = Math.min(Math.max(actual, 0), 100);
-        int jitter = ThreadLocalRandom.current().nextInt(-80, 81);
-        return Math.max(2_800, Math.min(3_200, 3_000 + activityOffset + jitter));
+        return actual;
     }
 
     // 对访客地址做不可逆摘要，避免持久化原始 IP
