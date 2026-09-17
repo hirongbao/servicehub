@@ -31,19 +31,40 @@ public class SiteCommentService {
         this.postMapper = postMapper;
     }
 
-    // 批量填充动态的评论列表（按时间正序）
+    // 批量填充动态的评论列表（树形结构：顶级评论含 children 子回复）
     public void fillByPostIds(List<Long> postIds, Map<Long, List<SiteComment>> target) {
         if (postIds.isEmpty()) {
             return;
         }
-        Map<Long, List<SiteComment>> grouped = mapper.selectList(new LambdaQueryWrapper<SiteComment>()
-                        .in(SiteComment::getPostId, postIds)
-                        .eq(SiteComment::getStatus, 1) // Only approved
-                        .orderByAsc(SiteComment::getCreatedAt)
-                        .orderByAsc(SiteComment::getId))
-                .stream()
-                .collect(Collectors.groupingBy(SiteComment::getPostId));
-        target.putAll(grouped);
+        List<SiteComment> all = mapper.selectList(new LambdaQueryWrapper<SiteComment>()
+                .in(SiteComment::getPostId, postIds)
+                .eq(SiteComment::getStatus, 1) // Only approved
+                .orderByAsc(SiteComment::getCreatedAt)
+                .orderByAsc(SiteComment::getId));
+
+        // 按 postId 分组后构建树
+        Map<Long, List<SiteComment>> byPost = all.stream().collect(Collectors.groupingBy(SiteComment::getPostId));
+        for (Map.Entry<Long, List<SiteComment>> entry : byPost.entrySet()) {
+            target.put(entry.getKey(), buildTree(entry.getValue()));
+        }
+    }
+
+    // 将扁平评论列表组装为树形结构
+    private List<SiteComment> buildTree(List<SiteComment> flat) {
+        Map<Long, SiteComment> map = new java.util.LinkedHashMap<>();
+        for (SiteComment c : flat) {
+            c.setChildren(new java.util.ArrayList<>());
+            map.put(c.getId(), c);
+        }
+        List<SiteComment> roots = new java.util.ArrayList<>();
+        for (SiteComment c : flat) {
+            if (c.getParentId() != null && map.containsKey(c.getParentId())) {
+                map.get(c.getParentId()).getChildren().add(c);
+            } else {
+                roots.add(c);
+            }
+        }
+        return roots;
     }
 
     // 发表访客评论（重载兼顾旧签名）
@@ -60,6 +81,16 @@ public class SiteCommentService {
         String commentContent = request.content().trim();
         comment.setContent(commentContent);
         comment.setStatus(0); // 0: pending
+
+        // 回复逻辑：设置 parentId 和 replyToAuthor
+        if (request.parentId() != null) {
+            SiteComment parent = mapper.selectById(request.parentId());
+            if (parent != null && parent.getPostId().equals(postId)) {
+                comment.setParentId(parent.getId());
+                comment.setReplyToAuthor(parent.getAuthor());
+            }
+        }
+
         mapper.insert(comment);
         
         try {
@@ -68,7 +99,10 @@ public class SiteCommentService {
             if (postTitle.length() > 30) {
                 postTitle = postTitle.substring(0, 30) + "...";
             }
-            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, authorName, commentContent, ipAddress);
+            String notifyContent = comment.getReplyToAuthor() != null
+                    ? "回复 @" + comment.getReplyToAuthor() + "：" + commentContent
+                    : commentContent;
+            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, authorName, notifyContent, ipAddress);
         } catch (Exception e) {
             System.err.println("发送评论审核通知失败: " + e.getMessage());
         }
