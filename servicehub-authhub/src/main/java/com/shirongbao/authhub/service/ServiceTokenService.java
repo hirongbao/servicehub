@@ -188,6 +188,14 @@ public class ServiceTokenService {
         log.setHub(token.getTokenType());
         log.setAction(action);
         usageLogMapper.insert(log);
+        
+        if (token.getMaxUses() != null && token.getMaxUses() > 0) {
+            Long used = usageLogMapper.selectCount(new QueryWrapper<TokenUsageLog>().eq("token_id", token.getId()));
+            if (used != null && used >= token.getMaxUses()) {
+                token.setStatus(0);
+                mapper.updateById(token);
+            }
+        }
     }
 
     // 分页查询 Token 使用日志，并附带 Token 名称

@@ -17,5 +17,16 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: servicehub-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSROD:?REDIS_PASSROD must be set in the environment}
+    volumes:
+      - servicehub-redis-data:/data
+
 volumes:
   servicehub-mysql-data:
+  servicehub-redis-data:
