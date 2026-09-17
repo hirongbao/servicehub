@@ -24,12 +24,33 @@ public class SiteArticleService {
         return mapper.selectPage(new Page<>(current, size), query);
     }
 
+    public IPage<SiteArticle> publishedPage(int current, int size) {
+        QueryWrapper<SiteArticle> query = new QueryWrapper<SiteArticle>()
+                .eq("status", 1)
+                .orderByDesc("created_at");
+        return mapper.selectPage(new Page<>(current, size), query);
+    }
+
     public SiteArticle get(Long id) {
         return mapper.selectById(id);
     }
 
+    public SiteArticle getPublished(Long id) {
+        SiteArticle article = mapper.selectOne(new QueryWrapper<SiteArticle>()
+                .eq("id", id)
+                .eq("status", 1));
+        if (article != null) {
+            article.setViewCount(article.getViewCount() == null ? 1 : article.getViewCount() + 1);
+            mapper.updateById(article);
+        }
+        return article;
+    }
+
     public SiteArticle save(SiteArticle article) {
         if (article.getId() == null) {
+            if (article.getViewCount() == null) {
+                article.setViewCount(0);
+            }
             mapper.insert(article);
         } else {
             mapper.updateById(article);

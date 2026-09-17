@@ -5,6 +5,7 @@
  */
 package com.shirongbao.hirongbaohub.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.common.util.IpUtils;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
@@ -14,9 +15,11 @@ import com.shirongbao.hirongbaohub.dto.PostPageResponse;
 import com.shirongbao.hirongbaohub.dto.SubscribeRequest;
 import com.shirongbao.hirongbaohub.dto.UnsubscribeRequest;
 import com.shirongbao.hirongbaohub.dto.VerifyRequest;
+import com.shirongbao.hirongbaohub.entity.SiteArticle;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SiteReleaseLog;
+import com.shirongbao.hirongbaohub.service.SiteArticleService;
 import com.shirongbao.hirongbaohub.service.SitePostService;
 import com.shirongbao.hirongbaohub.service.SiteProfileService;
 import com.shirongbao.hirongbaohub.service.SiteReleaseLogService;
@@ -41,13 +44,19 @@ public class HirongbaoHubController {
     private final SitePostService sitePostService;
     private final SiteReleaseLogService releaseLogService;
     private final SiteSubscriberService subscriberService;
+    private final SiteArticleService siteArticleService;
 
     // 初始化个人网站公开接口
-    public HirongbaoHubController(SiteProfileService siteProfileService, SitePostService sitePostService, SiteReleaseLogService releaseLogService, SiteSubscriberService subscriberService) {
+    public HirongbaoHubController(SiteProfileService siteProfileService,
+                                  SitePostService sitePostService,
+                                  SiteReleaseLogService releaseLogService,
+                                  SiteSubscriberService subscriberService,
+                                  SiteArticleService siteArticleService) {
         this.siteProfileService = siteProfileService;
         this.sitePostService = sitePostService;
         this.releaseLogService = releaseLogService;
         this.subscriberService = subscriberService;
+        this.siteArticleService = siteArticleService;
     }
 
     // 查询站点资料、社交名片与统计数字
@@ -74,6 +83,23 @@ public class HirongbaoHubController {
     @GetMapping("/posts/{id}")
     public ApiResponse<SitePost> post(@PathVariable Long id) {
         return ApiResponse.success(sitePostService.getPublishedPost(id));
+    }
+
+    // 查询已发布长文列表
+    @GetMapping("/articles")
+    public ApiResponse<IPage<SiteArticle>> articles(@RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(siteArticleService.publishedPage(page, size));
+    }
+
+    // 查询单篇已发布长文详情
+    @GetMapping("/articles/{id}")
+    public ApiResponse<SiteArticle> article(@PathVariable Long id) {
+        SiteArticle article = siteArticleService.getPublished(id);
+        if (article == null) {
+            throw new IllegalArgumentException("文章不存在或未发布");
+        }
+        return ApiResponse.success(article);
     }
 
     // 查询已发布更新日志
