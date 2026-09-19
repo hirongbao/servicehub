@@ -25,6 +25,12 @@ public class SitePasswordInterceptor implements HandlerInterceptor {
         }
 
         response.setStatus(401);
+        response.setContentType("application/json;charset=UTF-8");
+        try {
+            response.getWriter().write("{\"code\":401,\"message\":\"Unauthorized\",\"data\":null}");
+        } catch (Exception e) {
+            // ignore
+        }
         return false;
     }
 }
