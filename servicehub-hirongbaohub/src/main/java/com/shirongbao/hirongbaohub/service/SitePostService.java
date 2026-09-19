@@ -79,7 +79,11 @@ public class SitePostService {
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
-            query.eq(SitePost::getCategoryId, category.trim());
+            if (category.contains(",")) {
+                query.in(SitePost::getCategoryId, java.util.Arrays.asList(category.split(",")));
+            } else {
+                query.eq(SitePost::getCategoryId, category.trim());
+            }
         }
         List<SitePost> posts = mapper.selectList(query);
         fillMedia(posts);
@@ -101,7 +105,11 @@ public class SitePostService {
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
-            query.eq(SitePost::getCategoryId, category.trim());
+            if (category.contains(",")) {
+                query.in(SitePost::getCategoryId, java.util.Arrays.asList(category.split(",")));
+            } else {
+                query.eq(SitePost::getCategoryId, category.trim());
+            }
         }
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
         List<SitePost> posts = result.getRecords();
@@ -396,6 +404,9 @@ public class SitePostService {
         return switch (categoryId) {
             case "food" -> "美食";
             case "scenery" -> "风景";
+            case "sports" -> "运动";
+            case "football" -> "足球";
+            case "running" -> "跑步";
             default -> "随笔";
         };
     }
