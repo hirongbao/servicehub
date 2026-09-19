@@ -14,11 +14,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminAuthInterceptor adminAuthInterceptor;
     private final RequestLogInterceptor requestLogInterceptor;
+    private final SitePasswordInterceptor sitePasswordInterceptor;
 
     // 初始化拦截器注册配置
-    public WebMvcConfig(AdminAuthInterceptor adminAuthInterceptor, RequestLogInterceptor requestLogInterceptor) {
+    public WebMvcConfig(AdminAuthInterceptor adminAuthInterceptor, RequestLogInterceptor requestLogInterceptor, SitePasswordInterceptor sitePasswordInterceptor) {
         this.adminAuthInterceptor = adminAuthInterceptor;
         this.requestLogInterceptor = requestLogInterceptor;
+        this.sitePasswordInterceptor = sitePasswordInterceptor;
     }
 
     // 注册请求日志和管理端鉴权拦截器，放行登录、健康检查、开放文件、开放短链和个人网站公开接口（个人网站管理接口在 /api/site/** 下受保护）
@@ -28,5 +30,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/admin/login", "/api/health", "/api/filehub/**", "/api/linkhub/**", "/api/hirongbaohub/**");
+                
+        // 个人网站公开接口密码鉴权
+        registry.addInterceptor(sitePasswordInterceptor)
+                .addPathPatterns("/api/hirongbaohub/**")
+                .excludePathPatterns("/api/hirongbaohub/post"); // 放行外部 Agent 发动态接口
     }
 }
