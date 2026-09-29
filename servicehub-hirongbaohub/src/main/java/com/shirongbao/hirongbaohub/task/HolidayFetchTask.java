@@ -36,23 +36,23 @@ public class HolidayFetchTask {
             String dateStr = (String) nextHoliday.get("date"); // YYYY-MM-DD
             LocalDateTime eventDate = LocalDate.parse(dateStr).atStartOfDay();
 
-            // 查找所有 next_holiday 类型的纪念日
-            List<SiteAnniversary> autoHolidays = service.list(new LambdaQueryWrapper<SiteAnniversary>()
-                    .eq(SiteAnniversary::getType, "next_holiday"));
+            // 根据日期和标题去重（为了防止同一天有不同记录，主要按日期去重即可）
+            boolean exists = service.count(new LambdaQueryWrapper<SiteAnniversary>()
+                    .eq(SiteAnniversary::getEventDate, eventDate)) > 0;
 
-            if (autoHolidays.isEmpty()) {
-                // 如果没有，不需要自动创建，必须用户自己创建以设置背景图
-                return;
-            }
-
-            for (SiteAnniversary anniversary : autoHolidays) {
-                // 如果假期信息有变，更新
-                if (!localName.equals(anniversary.getTitle()) || !eventDate.equals(anniversary.getEventDate())) {
-                    anniversary.setTitle(localName);
-                    anniversary.setEventDate(eventDate);
-                    service.updateById(anniversary);
-                    log.info("更新下一个自动假期成功: {} - {}", localName, dateStr);
-                }
+            if (!exists) {
+                // 如果不存在，则新增一条记录，作为历史留存
+                SiteAnniversary holiday = new SiteAnniversary();
+                holiday.setTitle(localName);
+                holiday.setEventDate(eventDate);
+                holiday.setType("next_holiday");
+                holiday.setIcon("Plane"); // 默认图标
+                holiday.setCoverUrl(""); // 默认为空，用户自己上传
+                holiday.setIsEnabled(true);
+                holiday.setSortOrder(0);
+                
+                service.save(holiday);
+                log.info("自动创建了新的假期记录: {} - {}", localName, dateStr);
             }
 
         } catch (Exception e) {
