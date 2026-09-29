@@ -24,6 +24,7 @@ public class FileRecord {
     private String contentHash;
     private Long fileSize;
     private Integer status;
+    private String sourceType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

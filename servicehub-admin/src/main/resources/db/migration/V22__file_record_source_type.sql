@@ -1,0 +1,1 @@
+ALTER TABLE file_record ADD COLUMN source_type VARCHAR(32) DEFAULT 'ADMIN';

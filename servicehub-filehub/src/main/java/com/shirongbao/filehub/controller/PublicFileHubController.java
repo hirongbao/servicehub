@@ -1,10 +1,7 @@
-/*
- * auth: hirongbao
- * create: 2026-08-27
- * desc: 面向 FileHub Token 的公开文件接口
- */
 package com.shirongbao.filehub.controller;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import com.shirongbao.authhub.entity.ServiceToken;
 import jakarta.servlet.http.HttpServletRequest;
 import com.shirongbao.authhub.service.ServiceTokenService;
@@ -49,7 +46,21 @@ public class PublicFileHubController {
             @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
             @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(request, serviceToken, authorization, "upload");
-        return ApiResponse.success(service.upload(file, customKey));
+        return ApiResponse.success(service.upload(file, customKey, "API"));
+    }
+
+    @Operation(summary = "删除媒体文件", description = "根据 ID 删除文件。只能删除通过开放 API 上传的独立文件。")
+    @SecurityRequirement(name = "X-Service-Token")
+    @SecurityRequirement(name = "BearerAuth")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(
+            @Parameter(description = "文件 ID") @PathVariable Long id,
+            @Parameter(hidden = true) HttpServletRequest request,
+            @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+            @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
+        recordUsage(request, serviceToken, authorization, "delete");
+        service.deleteIfApiType(id);
+        return ApiResponse.success();
     }
 
     // 校验服务 Token 并记录使用日志

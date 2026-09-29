@@ -48,6 +48,10 @@ public class FileRecordService {
 
     // 校验并上传图片文件，支持自定义固定标识实现覆盖和 URL 不变
     public FileRecord upload(MultipartFile file, String customKey) {
+        return upload(file, customKey, "ADMIN");
+    }
+
+    public FileRecord upload(MultipartFile file, String customKey, String sourceType) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");
         if (file.getSize() > maxSize) throw new IllegalArgumentException("图片大小不能超过 10MB");
         if (!ALLOWED_TYPES.contains(file.getContentType())) throw new IllegalArgumentException("只允许上传 JPG、PNG、GIF 或 WEBP 图片");
@@ -73,6 +77,10 @@ public class FileRecordService {
                 existingByKey.setFileSize(file.getSize());
                 existingByKey.setContentType(file.getContentType());
                 existingByKey.setFileUrl(cos.publicUrl(objectKey));
+                // 如果是后台上传的，则提升权限；或者是本身同类型的覆盖
+                if ("ADMIN".equals(sourceType)) {
+                    existingByKey.setSourceType("ADMIN");
+                }
                 mapper.updateById(existingByKey);
                 return existingByKey;
             } else {
@@ -85,6 +93,7 @@ public class FileRecordService {
                 record.setContentHash(uniqueHash);
                 record.setFileSize(file.getSize());
                 record.setStatus(1);
+                record.setSourceType(sourceType);
                 mapper.insert(record);
                 return record;
             }
@@ -93,8 +102,16 @@ public class FileRecordService {
         FileRecord existing = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
         if (existing != null) {
             String expectedUrl = cos.publicUrl(existing.getObjectKey());
+            boolean changed = false;
             if (!expectedUrl.equals(existing.getFileUrl())) {
                 existing.setFileUrl(expectedUrl);
+                changed = true;
+            }
+            if ("ADMIN".equals(sourceType) && !"ADMIN".equals(existing.getSourceType())) {
+                existing.setSourceType("ADMIN");
+                changed = true;
+            }
+            if (changed) {
                 mapper.updateById(existing);
             }
             return existing;
@@ -108,6 +125,7 @@ public class FileRecordService {
         record.setContentHash(hash);
         record.setFileSize(file.getSize());
         record.setStatus(1);
+        record.setSourceType(sourceType);
         try {
             mapper.insert(record);
         } catch (DuplicateKeyException e) {
@@ -115,8 +133,16 @@ public class FileRecordService {
             FileRecord dupe = mapper.selectOne(new QueryWrapper<FileRecord>().eq("content_hash", hash));
             if (dupe != null) {
                 String expectedUrl = cos.publicUrl(dupe.getObjectKey());
+                boolean changed = false;
                 if (!expectedUrl.equals(dupe.getFileUrl())) {
                     dupe.setFileUrl(expectedUrl);
+                    changed = true;
+                }
+                if ("ADMIN".equals(sourceType) && !"ADMIN".equals(dupe.getSourceType())) {
+                    dupe.setSourceType("ADMIN");
+                    changed = true;
+                }
+                if (changed) {
                     mapper.updateById(dupe);
                 }
             }
@@ -129,6 +155,16 @@ public class FileRecordService {
     public void delete(Long id) {
         FileRecord record = mapper.selectById(id);
         if (record == null) throw new IllegalArgumentException("文件不存在");
+        cos.delete(record.getObjectKey());
+        mapper.deleteById(id);
+    }
+
+    public void deleteIfApiType(Long id) {
+        FileRecord record = mapper.selectById(id);
+        if (record == null) throw new IllegalArgumentException("文件不存在");
+        if (!"API".equals(record.getSourceType())) {
+            throw new IllegalArgumentException("无权删除后台管理上传的文件");
+        }
         cos.delete(record.getObjectKey());
         mapper.deleteById(id);
     }
