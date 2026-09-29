@@ -11,10 +11,10 @@ import java.util.List;
 public class SiteAnniversaryService extends ServiceImpl<SiteAnniversaryMapper, SiteAnniversary> {
     
     public List<SiteAnniversary> getAllAnniversaries() {
-        return lambdaQuery().orderByAsc(SiteAnniversary::getEventDate).list();
+        return lambdaQuery().orderByAsc(SiteAnniversary::getSortOrder).orderByAsc(SiteAnniversary::getEventDate).list();
     }
 
     public List<SiteAnniversary> getEnabledAnniversaries() {
-        return lambdaQuery().eq(SiteAnniversary::getIsEnabled, true).orderByAsc(SiteAnniversary::getEventDate).list();
+        return lambdaQuery().eq(SiteAnniversary::getIsEnabled, true).orderByAsc(SiteAnniversary::getSortOrder).orderByAsc(SiteAnniversary::getEventDate).list();
     }
 }

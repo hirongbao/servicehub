@@ -24,8 +24,17 @@ public class AdminAnniversaryController {
 
     @PostMapping
     public ApiResponse<SiteAnniversary> save(@RequestBody SiteAnniversary anniversary) {
+        if (anniversary.getSortOrder() == null) {
+            anniversary.setSortOrder(0);
+        }
         service.saveOrUpdate(anniversary);
         return ApiResponse.success(anniversary);
+    }
+
+    @PostMapping("/sort")
+    public ApiResponse<Void> updateSort(@RequestBody List<SiteAnniversary> list) {
+        service.updateBatchById(list);
+        return ApiResponse.success(null);
     }
 
     @DeleteMapping("/{id}")
