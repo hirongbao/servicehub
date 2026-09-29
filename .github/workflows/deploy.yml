@@ -50,6 +50,15 @@ jobs:
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           
+          # 0. 提前在服务器端利用现有的 jar 解压出依赖缓存！
+          # 这样第一次 rsync 也不需要跨国传输 46MB，直接复用服务器本地的历史依赖库。
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" '
+            mkdir -p /opt/apps/servicehub/sync_cache
+            if [ -f /opt/apps/servicehub/current/servicehub-admin.jar ] && [ ! -d /opt/apps/servicehub/sync_cache/BOOT-INF ]; then
+              unzip -q /opt/apps/servicehub/current/servicehub-admin.jar -d /opt/apps/servicehub/sync_cache/ || true
+            fi
+          '
+          
           # 1. 增量直传解压后的包体。因为 99% 都是没变的第三方 jar，实际每次只会传几百 KB 的 class 文件，极快！
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" "mkdir -p /opt/apps/servicehub/sync_cache"
           
