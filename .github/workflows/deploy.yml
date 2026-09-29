@@ -33,7 +33,10 @@ jobs:
 
       - name: Prepare source archive
         if: github.event_name == 'push'
-        run: git archive --format=tar.gz -o /tmp/backend-source.tar.gz HEAD
+        run: |
+          mkdir -p /tmp/exploded
+          JAR_PATH=$(find servicehub-admin/target -maxdepth 1 -type f -name "servicehub-admin-*.jar" ! -name "*-plain.jar" | head -n 1)
+          unzip -q "$JAR_PATH" -d /tmp/exploded
 
       - name: Deploy to server
         if: github.event_name == 'push'
@@ -47,42 +50,28 @@ jobs:
           chmod 600 ~/.ssh/servicehub_deploy
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          # 1. 直传 48KB 极小源码压缩包至服务器（无需让国内服务器连 GitHub，也无需跨国传输 46MB 大包）
-          scp -o BatchMode=yes -o StrictHostKeyChecking=no \
-            -i ~/.ssh/servicehub_deploy \
-            /tmp/backend-source.tar.gz \
-            "$SERVER_USER@$SERVER_HOST:/tmp/backend-source.tar.gz"
+          # 1. 增量直传解压后的包体。因为 99% 都是没变的第三方 jar，实际每次只会传几百 KB 的 class 文件，极快！
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" "mkdir -p /opt/apps/servicehub/sync_cache"
+          
+          rsync -az --delete -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ~/.ssh/servicehub_deploy" \
+            /tmp/exploded/ \
+            "$SERVER_USER@$SERVER_HOST:/opt/apps/servicehub/sync_cache/"
 
-          # 2. 服务器端解压、复用本地 Maven 依赖快速编译打包、原子切换软链并重启
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no \
-            -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" '
+          # 2. 服务器端只需要执行极速的零压缩封包，避免了 Maven 重度消耗内存导致的几分钟卡顿
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ~/.ssh/servicehub_deploy "$SERVER_USER@$SERVER_HOST" '
             set -euo pipefail
             APP_ROOT="/opt/apps/servicehub"
-            SOURCE_DIR="$APP_ROOT/source"
             RELEASE_DIR="$APP_ROOT/releases/$(date +%Y%m%d%H%M%S)"
 
             exec 9>"$APP_ROOT/deploy.lock"
             flock -n 9 || { echo "another backend deployment is already running"; exit 1; }
 
-            # 配置阿里云 Maven 镜像加速国内服务器下载
-            mkdir -p ~/.m2
-            if [ ! -f ~/.m2/settings.xml ] || ! grep -q "aliyunmaven" ~/.m2/settings.xml; then
-              echo "<settings><mirrors><mirror><id>aliyunmaven</id><mirrorOf>central</mirrorOf><name>aliyun</name><url>https://maven.aliyun.com/repository/public</url></mirror></mirrors></settings>" > ~/.m2/settings.xml
-            fi
-
-            mkdir -p "$SOURCE_DIR"
-            tar -xzf /tmp/backend-source.tar.gz -C "$SOURCE_DIR"
-            rm -f /tmp/backend-source.tar.gz
-
-            cd "$SOURCE_DIR"
-            # 去掉 clean 开启增量编译，加上 -T 1C 开启多线程，极大提升编译速度
-            mvn -pl servicehub-admin -am package -DskipTests -q -T 1C
-
-            JAR_PATH=$(find servicehub-admin/target -maxdepth 1 -type f -name "servicehub-admin-*.jar" ! -name "*-plain.jar" | head -n 1)
-            test -n "$JAR_PATH"
-
             mkdir -p "$RELEASE_DIR"
-            cp "$JAR_PATH" "$RELEASE_DIR/servicehub-admin.jar"
+            cd "$APP_ROOT/sync_cache"
+            
+            # 使用 jar 命令打包 (0 表示不压缩存储，这是 Spring Boot 嵌套 jar 所必需的要求)
+            jar -c0Mf "$RELEASE_DIR/servicehub-admin.jar" .
+
             ln -sfn "$RELEASE_DIR" "$APP_ROOT/current"
 
             systemctl --user daemon-reload
