@@ -1,0 +1,10 @@
+CREATE TABLE site_anniversary (
+    id VARCHAR(32) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    event_date DATE NOT NULL,
+    type VARCHAR(20) NOT NULL COMMENT 'countdown, countup, milestone',
+    icon VARCHAR(50),
+    cover_url VARCHAR(500),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
