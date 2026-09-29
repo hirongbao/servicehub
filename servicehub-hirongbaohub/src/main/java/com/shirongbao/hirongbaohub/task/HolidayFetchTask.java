@@ -34,7 +34,7 @@ public class HolidayFetchTask {
             Map<String, Object> nextHoliday = holidays.get(0);
             String localName = (String) nextHoliday.get("localName");
             String dateStr = (String) nextHoliday.get("date"); // YYYY-MM-DD
-            LocalDateTime eventDate = LocalDate.parse(dateStr).atStartOfDay();
+            LocalDate eventDate = LocalDate.parse(dateStr);
 
             // 根据日期和标题去重（为了防止同一天有不同记录，主要按日期去重即可）
             boolean exists = service.count(new LambdaQueryWrapper<SiteAnniversary>()
