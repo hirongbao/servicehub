@@ -21,6 +21,6 @@ public class AnniversaryController {
     
     @GetMapping("/anniversaries")
     public ApiResponse<List<SiteAnniversary>> getAllAnniversaries() {
-        return ApiResponse.success(service.getAllAnniversaries());
+        return ApiResponse.success(service.getEnabledAnniversaries());
     }
 }

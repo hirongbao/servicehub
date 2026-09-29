@@ -18,6 +18,7 @@ public class SiteAnniversary {
     private String type;
     private String icon;
     private String coverUrl;
+    private Boolean isEnabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
