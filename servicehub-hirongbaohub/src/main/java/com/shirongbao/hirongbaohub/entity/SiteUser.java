@@ -13,6 +13,7 @@ public class SiteUser {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String accountName;
+    private String nickname;
     private String email;
     private String passwordHash;
     private String role;

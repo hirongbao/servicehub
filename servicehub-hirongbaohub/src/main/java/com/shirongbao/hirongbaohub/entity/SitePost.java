@@ -40,6 +40,8 @@ public class SitePost {
     
     @TableField(exist = false)
     private String accountName;
+    @TableField(exist = false)
+    private String nickname;
     
     @TableField(exist = false)
     private String avatarUrl;

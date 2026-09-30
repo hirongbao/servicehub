@@ -85,6 +85,7 @@ public class SitePostService {
                 com.shirongbao.hirongbaohub.entity.SiteUser u = userMap.get(post.getUserId());
                 if (u != null) {
                     post.setAccountName(u.getAccountName());
+                    post.setNickname(u.getNickname() != null ? u.getNickname() : u.getAccountName());
                     post.setAvatarUrl(u.getAvatarUrl());
                 }
             }
@@ -119,6 +120,47 @@ public class SitePostService {
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
         List<SitePost> posts = result.getRecords();
         fillMedia(posts);
+        Map<Long, List<SiteComment>> grouped = new HashMap<>();
+        commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
+        for (SitePost post : posts) {
+            post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+        }
+        return new com.shirongbao.hirongbaohub.dto.PostPageResponse(posts, safePage, safeSize,
+                result.getTotal(), result.getCurrent() < result.getPages());
+    }
+
+    public com.shirongbao.hirongbaohub.dto.PostPageResponse squarePage(int page, int size) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), 30);
+        LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
+                .eq(SitePost::getStatus, 1)
+                .orderByDesc(SitePost::getCreatedAt)
+                .orderByDesc(SitePost::getId);
+        Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
+        List<SitePost> posts = result.getRecords();
+        fillMedia(posts);
+        fillUserInfo(posts);
+        Map<Long, List<SiteComment>> grouped = new HashMap<>();
+        commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
+        for (SitePost post : posts) {
+            post.setComments(grouped.getOrDefault(post.getId(), List.of()));
+        }
+        return new com.shirongbao.hirongbaohub.dto.PostPageResponse(posts, safePage, safeSize,
+                result.getTotal(), result.getCurrent() < result.getPages());
+    }
+
+    public com.shirongbao.hirongbaohub.dto.PostPageResponse userPage(Long userId, int page, int size) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), 30);
+        LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
+                .eq(SitePost::getUserId, userId)
+                .eq(SitePost::getStatus, 1)
+                .orderByDesc(SitePost::getCreatedAt)
+                .orderByDesc(SitePost::getId);
+        Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
+        List<SitePost> posts = result.getRecords();
+        fillMedia(posts);
+        fillUserInfo(posts);
         Map<Long, List<SiteComment>> grouped = new HashMap<>();
         commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
         for (SitePost post : posts) {

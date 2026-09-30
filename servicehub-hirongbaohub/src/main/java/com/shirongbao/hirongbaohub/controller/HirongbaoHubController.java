@@ -79,6 +79,14 @@ public class HirongbaoHubController {
         return ApiResponse.success(sitePostService.publishedPage(page, size));
     }
 
+    // 动态广场
+    @GetMapping("/posts/square")
+    public ApiResponse<PostPageResponse> squarePage(
+                                                   @RequestParam(defaultValue = "1") int page,
+                                                   @RequestParam(defaultValue = "12") int size) {
+        return ApiResponse.success(sitePostService.squarePage(page, size));
+    }
+
     // 根据 ID 查询单条动态
     @GetMapping("/posts/{id}")
     public ApiResponse<SitePost> post(@PathVariable Long id) {

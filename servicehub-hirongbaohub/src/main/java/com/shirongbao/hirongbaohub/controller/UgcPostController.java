@@ -44,9 +44,8 @@ public class UgcPostController {
         return ApiResponse.success(post);
     }
     
-    // 用户的动态列表 (通过用户名查询)
     @GetMapping("/user/{accountName}")
-    public ApiResponse<Page<SitePost>> getUserPosts(
+    public ApiResponse<com.shirongbao.hirongbaohub.dto.PostPageResponse> getUserPosts(
             @PathVariable String accountName,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -56,14 +55,6 @@ public class UgcPostController {
             throw new IllegalArgumentException("用户不存在");
         }
         
-        Page<SitePost> pg = new Page<>(page, size);
-        postMapper.selectPage(pg, new LambdaQueryWrapper<SitePost>()
-                .eq(SitePost::getUserId, targetUser.getId())
-                .eq(SitePost::getStatus, 1)
-                .orderByDesc(SitePost::getCreatedAt));
-                
-        postService.fillMedia(pg.getRecords());
-        
-        return ApiResponse.success(pg);
+        return ApiResponse.success(postService.userPage(targetUser.getId(), page, size));
     }
 }
