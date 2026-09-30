@@ -119,6 +119,11 @@ public class UserProfileController {
                 }
             }
             
+            // 同时同步更新 site_user 表的冗余字段，以便全站（留言板、右上角头像等）能正常显示
+            user.setAvatarUrl(avatarUrl);
+            user.setBio(bio);
+            userMapper.updateById(user);
+            
             return ApiResponse.success(siteProfileService.getProfile());
         }
         

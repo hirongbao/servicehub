@@ -82,10 +82,14 @@ public class SitePostService {
         List<Long> userIds = posts.stream().map(SitePost::getUserId).filter(java.util.Objects::nonNull).distinct().toList();
         if (userIds.isEmpty()) return;
         List<com.shirongbao.hirongbaohub.entity.SiteUser> users = userMapper.selectBatchIds(userIds);
-        java.util.Map<Long, String> userMap = users.stream().collect(java.util.stream.Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAccountName));
+        java.util.Map<Long, com.shirongbao.hirongbaohub.entity.SiteUser> userMap = users.stream().collect(java.util.stream.Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, u -> u));
         for (SitePost post : posts) {
             if (post.getUserId() != null) {
-                post.setAccountName(userMap.get(post.getUserId()));
+                com.shirongbao.hirongbaohub.entity.SiteUser u = userMap.get(post.getUserId());
+                if (u != null) {
+                    post.setAccountName(u.getAccountName());
+                    post.setAvatarUrl(u.getAvatarUrl());
+                }
             }
         }
     }
