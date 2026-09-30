@@ -113,6 +113,7 @@ public class SitePostService {
         int safeSize = Math.min(Math.max(size, 1), 30);
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
+                .isNull(SitePost::getUserId)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
