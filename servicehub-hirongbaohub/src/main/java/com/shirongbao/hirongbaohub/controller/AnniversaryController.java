@@ -36,6 +36,9 @@ public class AnniversaryController {
         if (user == null) {
             return ApiResponse.error("用户不存在");
         }
+        if ("ADMIN".equals(user.getRole())) {
+            return ApiResponse.success(service.getEnabledAnniversaries());
+        }
         return ApiResponse.success(service.getEnabledAnniversariesByUserId(user.getId()));
     }
 }

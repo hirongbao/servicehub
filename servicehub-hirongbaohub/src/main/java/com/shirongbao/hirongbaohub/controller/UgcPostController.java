@@ -55,6 +55,10 @@ public class UgcPostController {
             throw new IllegalArgumentException("用户不存在");
         }
         
+        if ("ADMIN".equals(targetUser.getRole())) {
+            return ApiResponse.success(postService.publishedPage(page, size));
+        }
+        
         return ApiResponse.success(postService.userPage(targetUser.getId(), page, size));
     }
 }

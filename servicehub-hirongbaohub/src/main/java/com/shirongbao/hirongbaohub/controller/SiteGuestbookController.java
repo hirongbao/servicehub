@@ -36,7 +36,7 @@ public class SiteGuestbookController {
         if (user == null) {
             return ApiResponse.error("用户不存在");
         }
-        guestbookService.addMessage(req.content(), user.getId());
+        guestbookService.addMessage(req.content(), "ADMIN".equals(user.getRole()) ? null : user.getId());
         return ApiResponse.success();
     }
 
@@ -54,6 +54,6 @@ public class SiteGuestbookController {
         if (user == null) {
             return ApiResponse.error("用户不存在");
         }
-        return ApiResponse.success(guestbookService.getMessageList(page, size, user.getId()));
+        return ApiResponse.success(guestbookService.getMessageList(page, size, "ADMIN".equals(user.getRole()) ? null : user.getId()));
     }
 }
