@@ -38,8 +38,8 @@ public class UgcPostController {
         // Use existing create logic but intercept it to set user_id and audit_status
         SitePost post = postService.create(request); // This currently sets status=1 and doesn't set user_id.
         post.setUserId(userId);
-        post.setAuditStatus(0); // 0 = pending
-        post.setStatus(0); // Not public until audited
+        post.setAuditStatus(1); // 1 = approved
+        post.setStatus(1); // Published
         postMapper.updateById(post); // update the fields set by service
         return ApiResponse.success(post);
     }
