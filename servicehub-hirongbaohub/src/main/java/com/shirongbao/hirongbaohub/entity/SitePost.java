@@ -37,6 +37,9 @@ public class SitePost {
 
     @TableField(exist = false)
     private Category category;
+    
+    @TableField(exist = false)
+    private String accountName;
 
     // 动态分类返回对象
     public record Category(String id, String name) {

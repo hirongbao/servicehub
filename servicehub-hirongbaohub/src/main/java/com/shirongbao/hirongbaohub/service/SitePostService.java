@@ -41,6 +41,7 @@ public class SitePostService {
     private final SitePostMediaMapper mediaMapper;
     private final SiteCommentService commentService;
     private final com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper;
+    private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
     private final SiteSubscriberService subscriberService;
     private final NoticeService noticeService;
     private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
@@ -51,11 +52,14 @@ public class SitePostService {
     // 初始化动态业务服务
     public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService,
                            com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper,
-                           SiteSubscriberService subscriberService, NoticeService noticeService) {
+                           com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper,
+                           SiteSubscriberService subscriberService,
+                           NoticeService noticeService) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
         this.commentService = commentService;
         this.visitorMapper = visitorMapper;
+        this.userMapper = userMapper;
         this.subscriberService = subscriberService;
         this.noticeService = noticeService;
     }
@@ -66,10 +70,24 @@ public class SitePostService {
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId));
         fillMedia(posts);
+        fillUserInfo(posts);
         for (SitePost post : posts) {
             post.setCategory(toCategory(post));
         }
         return posts;
+    }
+
+    private void fillUserInfo(List<SitePost> posts) {
+        if (posts == null || posts.isEmpty()) return;
+        List<Long> userIds = posts.stream().map(SitePost::getUserId).filter(java.util.Objects::nonNull).distinct().toList();
+        if (userIds.isEmpty()) return;
+        List<com.shirongbao.hirongbaohub.entity.SiteUser> users = userMapper.selectBatchIds(userIds);
+        java.util.Map<Long, String> userMap = users.stream().collect(java.util.stream.Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAccountName));
+        for (SitePost post : posts) {
+            if (post.getUserId() != null) {
+                post.setAccountName(userMap.get(post.getUserId()));
+            }
+        }
     }
 
     // 查询已发布动态及媒体、评论（个人网站公开接口）
