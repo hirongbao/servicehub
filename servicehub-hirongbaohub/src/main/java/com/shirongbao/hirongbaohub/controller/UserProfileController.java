@@ -4,36 +4,53 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteUser;
 import com.shirongbao.hirongbaohub.mapper.SiteUserMapper;
+import com.shirongbao.hirongbaohub.service.SiteProfileService;
+import com.shirongbao.hirongbaohub.dto.ProfileResponse;
+import com.shirongbao.hirongbaohub.dto.ProfileUpdateRequest;
+import com.shirongbao.hirongbaohub.dto.SocialUpsertRequest;
+import com.shirongbao.hirongbaohub.entity.SiteProfile;
+import com.shirongbao.hirongbaohub.entity.SiteSocial;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/profile/user")
 public class UserProfileController {
     private final SiteUserMapper userMapper;
+    private final SiteProfileService siteProfileService;
 
-    public UserProfileController(SiteUserMapper userMapper) {
+    public UserProfileController(SiteUserMapper userMapper, SiteProfileService siteProfileService) {
         this.userMapper = userMapper;
+        this.siteProfileService = siteProfileService;
     }
 
     @GetMapping("/{accountName}")
-    public ApiResponse<Map<String, Object>> getUserProfile(@PathVariable String accountName) {
+    public ApiResponse<Object> getUserProfile(@PathVariable String accountName) {
         SiteUser user = userMapper.selectOne(new LambdaQueryWrapper<SiteUser>().eq(SiteUser::getAccountName, accountName));
         if (user == null) {
             return ApiResponse.error("用户不存在");
         }
         
+        // 如果是管理员账号（站点拥有者），直接返回站点配置的公开资料
+        if ("ADMIN".equals(user.getRole())) {
+            return ApiResponse.success(siteProfileService.getProfile());
+        }
+        
         // Parse socialLinks JSON if exists, else return empty list
-        java.util.List<Map<String, String>> socials = new java.util.ArrayList<>();
+        List<Map<String, String>> socials = new ArrayList<>();
         if (user.getSocialLinks() != null && !user.getSocialLinks().isBlank()) {
             try {
                 // Using Jackson ObjectMapper to parse
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                socials = mapper.readValue(user.getSocialLinks(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Map<String, String>>>() {});
+                socials = mapper.readValue(user.getSocialLinks(), new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {});
             } catch (Exception e) {
                 // ignore parsing error
             }
@@ -53,8 +70,8 @@ public class UserProfileController {
         ));
     }
 
-    @org.springframework.web.bind.annotation.PostMapping("/update")
-    public ApiResponse<SiteUser> updateUserProfile(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> request) {
+    @PostMapping("/update")
+    public ApiResponse<Object> updateUserProfile(@RequestBody Map<String, Object> request) {
         Long userId = com.shirongbao.hirongbaohub.security.UserContext.getUserId();
         if (userId == null) {
             return ApiResponse.error("必须登录才能修改信息");
@@ -63,6 +80,49 @@ public class UserProfileController {
         if (user == null) {
             return ApiResponse.error("用户不存在");
         }
+        
+        // Admin Profile Update
+        if ("ADMIN".equals(user.getRole())) {
+            SiteProfile adminProfile = siteProfileService.adminProfile();
+            String avatarUrl = request.containsKey("avatarUrl") ? (String) request.get("avatarUrl") : adminProfile.getAvatarUrl();
+            String bio = request.containsKey("bio") ? (String) request.get("bio") : adminProfile.getBio();
+            
+            ProfileUpdateRequest profileRequest = new ProfileUpdateRequest(
+                adminProfile.getName(),
+                adminProfile.getHandle(),
+                bio,
+                avatarUrl
+            );
+            siteProfileService.updateProfile(profileRequest);
+            
+            // Sync Admin's socials
+            if (request.containsKey("socials")) {
+                List<SiteSocial> existingSocials = siteProfileService.adminSocials();
+                for (SiteSocial s : existingSocials) {
+                    siteProfileService.deleteSocial(s.getId());
+                }
+                
+                List<Map<String, String>> newSocials = (List<Map<String, String>>) request.get("socials");
+                if (newSocials != null) {
+                    for (int i = 0; i < newSocials.size(); i++) {
+                        Map<String, String> sm = newSocials.get(i);
+                        SocialUpsertRequest sur = new SocialUpsertRequest(
+                            sm.get("platform"),
+                            sm.get("iconName"),
+                            sm.get("url"),
+                            sm.get("qrCodeUrl"),
+                            i,
+                            1
+                        );
+                        siteProfileService.createSocial(sur);
+                    }
+                }
+            }
+            
+            return ApiResponse.success(siteProfileService.getProfile());
+        }
+        
+        // UGC Profile Update
         if (request.containsKey("avatarUrl")) {
             user.setAvatarUrl((String) request.get("avatarUrl"));
         }
