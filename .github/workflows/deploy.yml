@@ -65,6 +65,7 @@ jobs:
             flock -n 9 || { echo "another backend deployment is already running"; exit 1; }
 
             mkdir -p "$SOURCE_DIR"
+            rm -rf "$SOURCE_DIR"/*
             tar -xzf /tmp/backend-source.tar.gz -C "$SOURCE_DIR"
             rm -f /tmp/backend-source.tar.gz
 
