@@ -67,16 +67,16 @@ public class HirongbaoHubController {
 
     // 查询已发布动态（含媒体与评论）
     @GetMapping("/posts")
-    public ApiResponse<List<SitePost>> posts(@RequestParam(required = false) String category) {
-        return ApiResponse.success(sitePostService.publishedList(category));
+    public ApiResponse<List<SitePost>> posts() {
+        return ApiResponse.success(sitePostService.publishedList());
     }
 
     // 分页查询已发布动态
     @GetMapping("/posts/page")
-    public ApiResponse<PostPageResponse> postPage(@RequestParam(required = false) String category,
+    public ApiResponse<PostPageResponse> postPage(
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "12") int size) {
-        return ApiResponse.success(sitePostService.publishedPage(category, page, size));
+        return ApiResponse.success(sitePostService.publishedPage(page, size));
     }
 
     // 根据 ID 查询单条动态

@@ -71,9 +71,6 @@ public class SitePostService {
                 .orderByDesc(SitePost::getId));
         fillMedia(posts);
         fillUserInfo(posts);
-        for (SitePost post : posts) {
-            post.setCategory(toCategory(post));
-        }
         return posts;
     }
 
@@ -95,44 +92,29 @@ public class SitePostService {
     }
 
     // 查询已发布动态及媒体、评论（个人网站公开接口）
-    public List<SitePost> publishedList(String category) {
+    public List<SitePost> publishedList() {
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
-        if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
-            if (category.contains(",")) {
-                query.in(SitePost::getCategoryId, java.util.Arrays.asList(category.split(",")));
-            } else {
-                query.eq(SitePost::getCategoryId, category.trim());
-            }
-        }
         List<SitePost> posts = mapper.selectList(query);
         fillMedia(posts);
         Map<Long, List<SiteComment>> grouped = new HashMap<>();
         commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
         for (SitePost post : posts) {
             post.setComments(grouped.getOrDefault(post.getId(), List.of()));
-            post.setCategory(toCategory(post));
         }
         return posts;
     }
 
     // 查询已发布动态分页数据
-    public com.shirongbao.hirongbaohub.dto.PostPageResponse publishedPage(String category, int page, int size) {
+    public com.shirongbao.hirongbaohub.dto.PostPageResponse publishedPage(int page, int size) {
         int safePage = Math.max(page, 1);
         int safeSize = Math.min(Math.max(size, 1), 30);
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
-        if (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category)) {
-            if (category.contains(",")) {
-                query.in(SitePost::getCategoryId, java.util.Arrays.asList(category.split(",")));
-            } else {
-                query.eq(SitePost::getCategoryId, category.trim());
-            }
-        }
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
         List<SitePost> posts = result.getRecords();
         fillMedia(posts);
@@ -140,7 +122,6 @@ public class SitePostService {
         commentService.fillByPostIds(posts.stream().map(SitePost::getId).toList(), grouped);
         for (SitePost post : posts) {
             post.setComments(grouped.getOrDefault(post.getId(), List.of()));
-            post.setCategory(toCategory(post));
         }
         return new com.shirongbao.hirongbaohub.dto.PostPageResponse(posts, safePage, safeSize,
                 result.getTotal(), result.getCurrent() < result.getPages());
@@ -237,7 +218,6 @@ public class SitePostService {
         int randomLikes = 200 + new java.util.Random().nextInt(301);
         post.setLikeCount(randomLikes);
         post.setStatus(1);
-        applyCategory(post, request.categoryId(), request.categoryName());
         mapper.insert(post);
         insertMedia(post.getId(), mediaType, urls);
         post.setMedia(mediaMapper.selectList(new LambdaQueryWrapper<SitePostMedia>()
@@ -278,7 +258,6 @@ public class SitePostService {
         commentService.fillByPostIds(List.of(post.getId()), grouped);
         post.setComments(grouped.getOrDefault(post.getId(), List.of()));
         
-        post.setCategory(toCategory(post));
         return post;
     }
 
@@ -293,7 +272,6 @@ public class SitePostService {
             throw new IllegalArgumentException("动态内容和媒体至少要有一个");
         }
         post.setContent(content);
-        applyCategory(post, request.categoryId(), request.categoryName());
         mapper.updateById(post);
         mediaMapper.delete(new LambdaQueryWrapper<SitePostMedia>()
                 .eq(SitePostMedia::getPostId, post.getId()));
