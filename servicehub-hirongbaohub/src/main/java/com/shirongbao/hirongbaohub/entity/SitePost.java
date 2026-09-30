@@ -24,6 +24,8 @@ public class SitePost {
     private Integer status;
     private String categoryId;
     private String categoryName;
+    private Long userId;
+    private Integer auditStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

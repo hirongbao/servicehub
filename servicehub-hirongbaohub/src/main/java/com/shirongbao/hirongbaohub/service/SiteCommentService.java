@@ -23,12 +23,14 @@ public class SiteCommentService {
     private final SiteCommentMapper mapper;
     private final NoticeService noticeService;
     private final SitePostMapper postMapper;
+    private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
 
     // 初始化评论业务服务
-    public SiteCommentService(SiteCommentMapper mapper, NoticeService noticeService, SitePostMapper postMapper) {
+    public SiteCommentService(SiteCommentMapper mapper, NoticeService noticeService, SitePostMapper postMapper, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
         this.mapper = mapper;
         this.noticeService = noticeService;
         this.postMapper = postMapper;
+        this.userMapper = userMapper;
     }
 
     // 批量填充动态的评论列表（树形结构：顶级评论含 children 子回复）
@@ -73,14 +75,23 @@ public class SiteCommentService {
     }
 
     public SiteComment add(Long postId, CommentCreateRequest request, String ipAddress) {
+        Long userId = com.shirongbao.hirongbaohub.security.UserContext.getUserId();
+        if (userId == null) {
+            throw new IllegalArgumentException("必须登录才能发表评论");
+        }
+        com.shirongbao.hirongbaohub.entity.SiteUser user = userMapper.selectById(userId);
+        if (user == null || user.getStatus() != 1) {
+            throw new IllegalArgumentException("无效的用户状态");
+        }
+
         SiteComment comment = new SiteComment();
         comment.setPostId(postId);
-        String authorName = request.author() == null || request.author().isBlank() ? "访客" : request.author().trim();
-        comment.setAuthor(authorName);
+        comment.setUserId(userId);
+        comment.setAuthor(user.getAccountName());
         comment.setIpAddress(ipAddress != null && ipAddress.length() > 45 ? ipAddress.substring(0, 45) : ipAddress);
         String commentContent = request.content().trim();
         comment.setContent(commentContent);
-        comment.setStatus(0); // 0: pending
+        comment.setStatus(1); // 登录用户免审核，直接通过
 
         // 回复逻辑：设置 parentId 和 replyToAuthor
         if (request.parentId() != null) {
@@ -102,9 +113,10 @@ public class SiteCommentService {
             String notifyContent = comment.getReplyToAuthor() != null
                     ? "回复 @" + comment.getReplyToAuthor() + "：" + commentContent
                     : commentContent;
-            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, authorName, notifyContent, ipAddress);
+            // 因为现在免审核了，所以只做提醒，文案还是复用以前的
+            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, user.getAccountName(), notifyContent, ipAddress);
         } catch (Exception e) {
-            System.err.println("发送评论审核通知失败: " + e.getMessage());
+            System.err.println("发送评论通知失败: " + e.getMessage());
         }
         
         return comment;

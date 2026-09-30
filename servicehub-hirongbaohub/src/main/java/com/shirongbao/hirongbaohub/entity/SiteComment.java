@@ -21,6 +21,7 @@ public class SiteComment {
     private Long id;
     private Long postId;
     private Long parentId;
+    private Long userId;
     private String author;
     private String ipAddress;
     private String replyToAuthor;

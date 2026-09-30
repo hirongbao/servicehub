@@ -286,6 +286,9 @@ public class SitePostService {
     public SitePost updateStatus(Long id, Integer status) {
         SitePost post = require(id);
         post.setStatus(status == null || status != 1 ? 0 : 1);
+        if (post.getStatus() == 1) {
+            post.setAuditStatus(1);
+        }
         mapper.updateById(post);
         return post;
     }
@@ -300,7 +303,7 @@ public class SitePostService {
     }
 
     // 批量填充动态的媒体列表
-    private void fillMedia(List<SitePost> posts) {
+    public void fillMedia(List<SitePost> posts) {
         if (posts.isEmpty()) {
             return;
         }
