@@ -17,6 +17,8 @@ public class SiteUser {
     private String passwordHash;
     private String role;
     private String avatarUrl;
+    private String bio;
+    private String socialLinks;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

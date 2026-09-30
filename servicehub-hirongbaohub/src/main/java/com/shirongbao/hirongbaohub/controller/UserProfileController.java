@@ -27,18 +27,58 @@ public class UserProfileController {
             return ApiResponse.error("用户不存在");
         }
         
-        // Mocking the profile format so it works with the frontend
+        // Parse socialLinks JSON if exists, else return empty list
+        java.util.List<Map<String, String>> socials = new java.util.ArrayList<>();
+        if (user.getSocialLinks() != null && !user.getSocialLinks().isBlank()) {
+            try {
+                // Using Jackson ObjectMapper to parse
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                socials = mapper.readValue(user.getSocialLinks(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Map<String, String>>>() {});
+            } catch (Exception e) {
+                // ignore parsing error
+            }
+        }
+        
         return ApiResponse.success(Map.of(
             "name", user.getAccountName(),
             "handle", "@" + user.getAccountName(),
-            "bio", "这个人很懒，什么都没写~",
+            "bio", user.getBio() != null && !user.getBio().isBlank() ? user.getBio() : "这个人很懒，什么都没写~",
             "avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "",
             "stats", Map.of(
                 "posts", 0, // Mock, or could query COUNT(*)
                 "followers", 0,
                 "following", 0
             ),
-            "socials", java.util.List.of()
+            "socials", socials
         ));
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/update")
+    public ApiResponse<SiteUser> updateUserProfile(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> request) {
+        Long userId = com.shirongbao.hirongbaohub.security.UserContext.getUserId();
+        if (userId == null) {
+            return ApiResponse.error("必须登录才能修改信息");
+        }
+        SiteUser user = userMapper.selectById(userId);
+        if (user == null) {
+            return ApiResponse.error("用户不存在");
+        }
+        if (request.containsKey("avatarUrl")) {
+            user.setAvatarUrl((String) request.get("avatarUrl"));
+        }
+        if (request.containsKey("bio")) {
+            user.setBio((String) request.get("bio"));
+        }
+        if (request.containsKey("socials")) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                String socialsStr = mapper.writeValueAsString(request.get("socials"));
+                user.setSocialLinks(socialsStr);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        userMapper.updateById(user);
+        return ApiResponse.success(user);
     }
 }

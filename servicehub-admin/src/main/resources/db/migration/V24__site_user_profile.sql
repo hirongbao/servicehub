@@ -1,0 +1,2 @@
+ALTER TABLE site_user ADD COLUMN bio VARCHAR(255) DEFAULT '';
+ALTER TABLE site_user ADD COLUMN social_links TEXT;
