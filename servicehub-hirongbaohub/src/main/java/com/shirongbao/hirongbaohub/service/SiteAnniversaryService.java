@@ -15,6 +15,14 @@ public class SiteAnniversaryService extends ServiceImpl<SiteAnniversaryMapper, S
     }
 
     public List<SiteAnniversary> getEnabledAnniversaries() {
-        return lambdaQuery().eq(SiteAnniversary::getIsEnabled, true).orderByAsc(SiteAnniversary::getSortOrder).orderByAsc(SiteAnniversary::getEventDate).list();
+        return lambdaQuery().eq(SiteAnniversary::getIsEnabled, true)
+                .isNull(SiteAnniversary::getUserId)
+                .orderByAsc(SiteAnniversary::getSortOrder).orderByAsc(SiteAnniversary::getEventDate).list();
+    }
+
+    public List<SiteAnniversary> getEnabledAnniversariesByUserId(Long userId) {
+        return lambdaQuery().eq(SiteAnniversary::getIsEnabled, true)
+                .eq(SiteAnniversary::getUserId, userId)
+                .orderByAsc(SiteAnniversary::getSortOrder).orderByAsc(SiteAnniversary::getEventDate).list();
     }
 }

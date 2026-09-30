@@ -56,14 +56,18 @@ public class UserProfileController {
             }
         }
         
+        long postsCount = siteProfileService.getPostCountByUserId(user.getId());
+        // Currently we don't have a real follower system, so mock a value based on user id or some heuristic.
+        long followersCount = (user.getId() * 10) + 120; 
+        
         return ApiResponse.success(Map.of(
             "name", user.getAccountName(),
             "handle", "@" + user.getAccountName(),
             "bio", user.getBio() != null && !user.getBio().isBlank() ? user.getBio() : "这个人很懒，什么都没写~",
             "avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "",
             "stats", Map.of(
-                "posts", 0, // Mock, or could query COUNT(*)
-                "followers", 0,
+                "posts", postsCount, 
+                "followers", followersCount,
                 "following", 0
             ),
             "socials", socials

@@ -25,7 +25,7 @@ public class SiteGuestbookService {
         this.userMapper = userMapper;
     }
 
-    public SiteGuestbook addMessage(String content) {
+    public SiteGuestbook addMessage(String content, Long targetUserId) {
         Long userId = UserContext.getUserId();
         if (userId == null) {
             throw new IllegalArgumentException("请先登录");
@@ -41,9 +41,16 @@ public class SiteGuestbookService {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
         
-        Long countToday = guestbookMapper.selectCount(new QueryWrapper<SiteGuestbook>()
+        QueryWrapper<SiteGuestbook> query = new QueryWrapper<SiteGuestbook>()
                 .eq("user_id", userId)
-                .between("created_at", startOfDay, endOfDay));
+                .between("created_at", startOfDay, endOfDay);
+        if (targetUserId == null) {
+            query.isNull("target_user_id");
+        } else {
+            query.eq("target_user_id", targetUserId);
+        }
+
+        Long countToday = guestbookMapper.selectCount(query);
                 
         if (countToday != null && countToday > 0) {
             throw new IllegalArgumentException("您今日已留下足迹，明天再来吧~");
@@ -51,15 +58,22 @@ public class SiteGuestbookService {
         
         SiteGuestbook msg = new SiteGuestbook();
         msg.setUserId(userId);
+        msg.setTargetUserId(targetUserId);
         msg.setContent(content.trim());
         msg.setCreatedAt(LocalDateTime.now());
         guestbookMapper.insert(msg);
         return msg;
     }
 
-    public Page<Map<String, Object>> getMessageList(int page, int size) {
+    public Page<Map<String, Object>> getMessageList(int page, int size, Long targetUserId) {
         Page<SiteGuestbook> pg = new Page<>(page, size);
-        guestbookMapper.selectPage(pg, new QueryWrapper<SiteGuestbook>().orderByDesc("created_at"));
+        QueryWrapper<SiteGuestbook> query = new QueryWrapper<SiteGuestbook>().orderByDesc("created_at");
+        if (targetUserId == null) {
+            query.isNull("target_user_id");
+        } else {
+            query.eq("target_user_id", targetUserId);
+        }
+        guestbookMapper.selectPage(pg, query);
         
         List<Map<String, Object>> records = pg.getRecords().stream().map(g -> {
             SiteUser user = userMapper.selectById(g.getUserId());

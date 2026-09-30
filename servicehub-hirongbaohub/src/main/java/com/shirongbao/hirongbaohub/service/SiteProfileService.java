@@ -63,6 +63,12 @@ public class SiteProfileService {
                 profile.getAvatarUrl(), items, stats);
     }
 
+    public long getPostCountByUserId(Long userId) {
+        return postMapper.selectCount(new LambdaQueryWrapper<SitePost>()
+                .eq(SitePost::getUserId, userId)
+                .eq(SitePost::getStatus, 1));
+    }
+
     // 查询站点资料与全部社媒名片（管理端，含已禁用）
     public SiteProfile adminProfile() {
         SiteProfile profile = profileMapper.selectOne(new LambdaQueryWrapper<SiteProfile>()

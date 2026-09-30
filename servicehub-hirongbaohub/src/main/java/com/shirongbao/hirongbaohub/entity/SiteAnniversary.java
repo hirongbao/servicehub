@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class SiteAnniversary {
     @TableId(type = IdType.ASSIGN_ID)
     private String id;
+    private Long userId;
     private String title;
     private LocalDate eventDate;
     private String type;
