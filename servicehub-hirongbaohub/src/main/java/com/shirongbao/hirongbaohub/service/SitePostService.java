@@ -261,6 +261,12 @@ public class SitePostService {
         int randomLikes = 200 + new java.util.Random().nextInt(301);
         post.setLikeCount(randomLikes);
         post.setStatus(1);
+        
+        com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>().eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
+        if (adminUser != null) {
+            post.setUserId(adminUser.getId());
+        }
+        
         mapper.insert(post);
         insertMedia(post.getId(), mediaType, urls);
         post.setMedia(mediaMapper.selectList(new LambdaQueryWrapper<SitePostMedia>()

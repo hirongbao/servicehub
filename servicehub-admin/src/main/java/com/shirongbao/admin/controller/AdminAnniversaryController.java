@@ -12,9 +12,11 @@ import java.util.List;
 public class AdminAnniversaryController {
 
     private final SiteAnniversaryService service;
+    private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
 
-    public AdminAnniversaryController(SiteAnniversaryService service) {
+    public AdminAnniversaryController(SiteAnniversaryService service, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
         this.service = service;
+        this.userMapper = userMapper;
     }
 
     @GetMapping
@@ -26,6 +28,12 @@ public class AdminAnniversaryController {
     public ApiResponse<SiteAnniversary> save(@RequestBody SiteAnniversary anniversary) {
         if (anniversary.getSortOrder() == null) {
             anniversary.setSortOrder(0);
+        }
+        if (anniversary.getUserId() == null) {
+            com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>().eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
+            if (adminUser != null) {
+                anniversary.setUserId(adminUser.getId());
+            }
         }
         service.saveOrUpdate(anniversary);
         return ApiResponse.success(anniversary);
