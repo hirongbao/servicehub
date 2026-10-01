@@ -41,12 +41,28 @@ public class SiteUserService {
         "login", "register", "auth", "test", "webmaster"
     );
 
+    private volatile Long cachedAdminId;
+
     public SiteUserService(SiteUserMapper mapper, NoticeService noticeService, 
                            StringRedisTemplate redisTemplate, UserCredentialService credentialService) {
         this.mapper = mapper;
         this.noticeService = noticeService;
         this.redisTemplate = redisTemplate;
         this.credentialService = credentialService;
+    }
+
+    /**
+     * 获取站长（ADMIN）的 user_id，带内存缓存。
+     * 全局唯一入口，消除散落各处的 ADMIN 查询。
+     */
+    public Long getAdminUserId() {
+        if (cachedAdminId == null) {
+            SiteUser admin = mapper.selectOne(new QueryWrapper<SiteUser>().eq("role", "ADMIN").last("LIMIT 1"));
+            if (admin != null) {
+                cachedAdminId = admin.getId();
+            }
+        }
+        return cachedAdminId;
     }
 
     @PostConstruct

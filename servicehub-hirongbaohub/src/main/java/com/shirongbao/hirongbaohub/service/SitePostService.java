@@ -44,6 +44,7 @@ public class SitePostService {
     private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
     private final SiteSubscriberService subscriberService;
     private final NoticeService noticeService;
+    private final SiteUserService siteUserService;
     private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
 
     @Value("${noticehub.site.url:https://hrb.design}")
@@ -54,7 +55,8 @@ public class SitePostService {
                            com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper,
                            com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper,
                            SiteSubscriberService subscriberService,
-                           NoticeService noticeService) {
+                           NoticeService noticeService,
+                           SiteUserService siteUserService) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
         this.commentService = commentService;
@@ -62,6 +64,7 @@ public class SitePostService {
         this.userMapper = userMapper;
         this.subscriberService = subscriberService;
         this.noticeService = noticeService;
+        this.siteUserService = siteUserService;
     }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
@@ -94,8 +97,10 @@ public class SitePostService {
 
     // 查询已发布动态及媒体、评论（个人网站公开接口）
     public List<SitePost> publishedList() {
+        Long adminId = siteUserService.getAdminUserId();
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
+                .eq(adminId != null, SitePost::getUserId, adminId)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         List<SitePost> posts = mapper.selectList(query);
@@ -113,12 +118,10 @@ public class SitePostService {
         int safePage = Math.max(page, 1);
         int safeSize = Math.min(Math.max(size, 1), 30);
         // 主站数据 = 站长(ADMIN)的数据
-        com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>()
-                        .eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
+        Long adminId = siteUserService.getAdminUserId();
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
-                .eq(adminUser != null, SitePost::getUserId, adminUser != null ? adminUser.getId() : null)
+                .eq(adminId != null, SitePost::getUserId, adminId)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
@@ -250,9 +253,9 @@ public class SitePostService {
         return commentService.add(id, request, ipAddress);
     }
 
-    // 发布动态
+    // 发布官方动态（仅限管理员）
     @Transactional
-    public SitePost create(PostUpsertRequest request) {
+    public SitePost createOfficialPost(PostUpsertRequest request) {
         String content = trimToNull(request.content());
         List<String> urls = normalizeUrls(request.mediaUrls());
         String mediaType = resolveMediaType(request.mediaType(), urls);
@@ -266,9 +269,9 @@ public class SitePostService {
         post.setLikeCount(randomLikes);
         post.setStatus(1);
         
-        com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>().eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
-        if (adminUser != null) {
-            post.setUserId(adminUser.getId());
+        Long adminId = siteUserService.getAdminUserId();
+        if (adminId != null) {
+            post.setUserId(adminId);
         }
         
         mapper.insert(post);
@@ -296,6 +299,33 @@ public class SitePostService {
                 }
             });
         }
+        return post;
+    }
+
+    // 发布UGC动态（普通用户）
+    @Transactional
+    public SitePost createUgcPost(PostUpsertRequest request, Long userId) {
+        String content = trimToNull(request.content());
+        List<String> urls = normalizeUrls(request.mediaUrls());
+        String mediaType = resolveMediaType(request.mediaType(), urls);
+        if (content == null && urls.isEmpty()) {
+            throw new IllegalArgumentException("动态内容和媒体至少要有一个");
+        }
+        SitePost post = new SitePost();
+        post.setContent(content);
+        // 初始点赞数在200-500之间做一个随机数去插入
+        int randomLikes = 200 + new java.util.Random().nextInt(301);
+        post.setLikeCount(randomLikes);
+        post.setUserId(userId);
+        post.setAuditStatus(1);
+        post.setStatus(1);
+        
+        mapper.insert(post);
+        insertMedia(post.getId(), mediaType, urls);
+        post.setMedia(mediaMapper.selectList(new LambdaQueryWrapper<SitePostMedia>()
+                .eq(SitePostMedia::getPostId, post.getId())
+                .orderByAsc(SitePostMedia::getSortOrder)));
+        
         return post;
     }
 

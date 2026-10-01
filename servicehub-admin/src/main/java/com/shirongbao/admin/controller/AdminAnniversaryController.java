@@ -3,6 +3,7 @@ package com.shirongbao.admin.controller;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteAnniversary;
 import com.shirongbao.hirongbaohub.service.SiteAnniversaryService;
+import com.shirongbao.hirongbaohub.service.SiteUserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,11 +13,11 @@ import java.util.List;
 public class AdminAnniversaryController {
 
     private final SiteAnniversaryService service;
-    private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
+    private final SiteUserService siteUserService;
 
-    public AdminAnniversaryController(SiteAnniversaryService service, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
+    public AdminAnniversaryController(SiteAnniversaryService service, SiteUserService siteUserService) {
         this.service = service;
-        this.userMapper = userMapper;
+        this.siteUserService = siteUserService;
     }
 
     @GetMapping
@@ -30,9 +31,9 @@ public class AdminAnniversaryController {
             anniversary.setSortOrder(0);
         }
         if (anniversary.getUserId() == null) {
-            com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>().eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
-            if (adminUser != null) {
-                anniversary.setUserId(adminUser.getId());
+            Long adminId = siteUserService.getAdminUserId();
+            if (adminId != null) {
+                anniversary.setUserId(adminId);
             }
         }
         service.saveOrUpdate(anniversary);

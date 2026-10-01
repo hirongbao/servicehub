@@ -6,6 +6,7 @@ import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteUser;
 import com.shirongbao.hirongbaohub.mapper.SiteUserMapper;
 import com.shirongbao.hirongbaohub.service.SiteGuestbookService;
+import com.shirongbao.hirongbaohub.service.SiteUserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -16,15 +17,16 @@ public class SiteGuestbookController {
     
     private final SiteGuestbookService guestbookService;
     private final SiteUserMapper userMapper;
+    private final SiteUserService siteUserService;
 
-    public SiteGuestbookController(SiteGuestbookService guestbookService, SiteUserMapper userMapper) {
+    public SiteGuestbookController(SiteGuestbookService guestbookService, SiteUserMapper userMapper, SiteUserService siteUserService) {
         this.guestbookService = guestbookService;
         this.userMapper = userMapper;
+        this.siteUserService = siteUserService;
     }
 
     private Long getAdminUserId() {
-        SiteUser admin = userMapper.selectOne(new LambdaQueryWrapper<SiteUser>().eq(SiteUser::getRole, "ADMIN").last("LIMIT 1"));
-        return admin != null ? admin.getId() : null;
+        return siteUserService.getAdminUserId();
     }
 
     public record GuestbookRequest(String content) {}

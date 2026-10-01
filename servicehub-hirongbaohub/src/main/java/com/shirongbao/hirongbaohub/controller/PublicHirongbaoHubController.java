@@ -90,7 +90,7 @@ public class PublicHirongbaoHubController {
         ServiceToken serviceTokenEntity = tokenService.requireActive(token, HUB);
         httpRequest.setAttribute("auth.tokenName", serviceTokenEntity.getTokenName());
         tokenService.recordUsage(serviceTokenEntity, "create_post");
-        return ApiResponse.success(postService.create(request));
+        return ApiResponse.success(postService.createOfficialPost(request));
     }
 
 

@@ -3,6 +3,7 @@ package com.shirongbao.hirongbaohub.task;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.entity.SiteAnniversary;
 import com.shirongbao.hirongbaohub.service.SiteAnniversaryService;
+import com.shirongbao.hirongbaohub.service.SiteUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class HolidayFetchTask {
 
     private final SiteAnniversaryService service;
+    private final SiteUserService siteUserService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Scheduled(cron = "0 1 0 * * ?") // 每天凌晨 00:01 执行
@@ -50,6 +52,7 @@ public class HolidayFetchTask {
                 holiday.setCoverUrl(""); // 默认为空，用户自己上传
                 holiday.setIsEnabled(true);
                 holiday.setSortOrder(0);
+                holiday.setUserId(siteUserService.getAdminUserId());
                 
                 service.save(holiday);
                 log.info("自动创建了新的假期记录: {} - {}", localName, dateStr);

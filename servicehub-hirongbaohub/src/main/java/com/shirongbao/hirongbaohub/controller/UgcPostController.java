@@ -6,7 +6,6 @@ import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.dto.PostUpsertRequest;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import com.shirongbao.hirongbaohub.entity.SiteUser;
-import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
 import com.shirongbao.hirongbaohub.mapper.SiteUserMapper;
 import com.shirongbao.hirongbaohub.security.UserContext;
 import com.shirongbao.hirongbaohub.service.SitePostService;
@@ -19,12 +18,10 @@ import java.util.Map;
 public class UgcPostController {
 
     private final SitePostService postService;
-    private final SitePostMapper postMapper;
     private final SiteUserMapper userMapper;
 
-    public UgcPostController(SitePostService postService, SitePostMapper postMapper, SiteUserMapper userMapper) {
+    public UgcPostController(SitePostService postService, SiteUserMapper userMapper) {
         this.postService = postService;
-        this.postMapper = postMapper;
         this.userMapper = userMapper;
     }
 
@@ -35,12 +32,7 @@ public class UgcPostController {
             throw new IllegalArgumentException("必须登录才能发布动态");
         }
         
-        // Use existing create logic but intercept it to set user_id and audit_status
-        SitePost post = postService.create(request); // This currently sets status=1 and doesn't set user_id.
-        post.setUserId(userId);
-        post.setAuditStatus(1); // 1 = approved
-        post.setStatus(1); // Published
-        postMapper.updateById(post); // update the fields set by service
+        SitePost post = postService.createUgcPost(request, userId);
         return ApiResponse.success(post);
     }
     

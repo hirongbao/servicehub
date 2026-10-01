@@ -56,7 +56,7 @@ public class AdminSiteController {
     // 发布动态
     @PostMapping("/posts")
     public ApiResponse<SitePost> createPost(@Valid @RequestBody PostUpsertRequest request) {
-        return ApiResponse.success(postService.create(request));
+        return ApiResponse.success(postService.createOfficialPost(request));
     }
 
     // 编辑动态
