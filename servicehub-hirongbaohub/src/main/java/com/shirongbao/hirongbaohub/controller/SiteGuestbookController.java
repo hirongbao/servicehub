@@ -22,11 +22,16 @@ public class SiteGuestbookController {
         this.userMapper = userMapper;
     }
 
+    private Long getAdminUserId() {
+        SiteUser admin = userMapper.selectOne(new LambdaQueryWrapper<SiteUser>().eq(SiteUser::getRole, "ADMIN").last("LIMIT 1"));
+        return admin != null ? admin.getId() : null;
+    }
+
     public record GuestbookRequest(String content) {}
 
     @PostMapping("/add")
     public ApiResponse<Void> addMessage(@RequestBody GuestbookRequest req) {
-        guestbookService.addMessage(req.content(), null);
+        guestbookService.addMessage(req.content(), getAdminUserId());
         return ApiResponse.success();
     }
 
@@ -43,7 +48,7 @@ public class SiteGuestbookController {
     @GetMapping("/list")
     public ApiResponse<Page<Map<String, Object>>> list(@RequestParam(defaultValue = "1") int page,
                                                        @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(guestbookService.getMessageList(page, size, null));
+        return ApiResponse.success(guestbookService.getMessageList(page, size, getAdminUserId()));
     }
 
     @GetMapping("/list/user/{accountName}")

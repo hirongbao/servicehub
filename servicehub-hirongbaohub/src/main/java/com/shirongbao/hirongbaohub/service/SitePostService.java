@@ -112,9 +112,13 @@ public class SitePostService {
     public com.shirongbao.hirongbaohub.dto.PostPageResponse publishedPage(int page, int size) {
         int safePage = Math.max(page, 1);
         int safeSize = Math.min(Math.max(size, 1), 30);
+        // 主站数据 = 站长(ADMIN)的数据
+        com.shirongbao.hirongbaohub.entity.SiteUser adminUser = userMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.shirongbao.hirongbaohub.entity.SiteUser>()
+                        .eq(com.shirongbao.hirongbaohub.entity.SiteUser::getRole, "ADMIN").last("LIMIT 1"));
         LambdaQueryWrapper<SitePost> query = new LambdaQueryWrapper<SitePost>()
                 .eq(SitePost::getStatus, 1)
-                .isNull(SitePost::getUserId)
+                .eq(adminUser != null, SitePost::getUserId, adminUser != null ? adminUser.getId() : null)
                 .orderByDesc(SitePost::getCreatedAt)
                 .orderByDesc(SitePost::getId);
         Page<SitePost> result = mapper.selectPage(new Page<>(safePage, safeSize), query);
