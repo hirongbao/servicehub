@@ -25,6 +25,7 @@ public class FileRecord {
     private Long fileSize;
     private Integer status;
     private String sourceType;
+    private Long userId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

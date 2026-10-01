@@ -48,10 +48,14 @@ public class FileRecordService {
 
     // 校验并上传图片文件，支持自定义固定标识实现覆盖和 URL 不变
     public FileRecord upload(MultipartFile file, String customKey) {
-        return upload(file, customKey, "ADMIN");
+        return upload(file, customKey, "ADMIN", null);
     }
 
     public FileRecord upload(MultipartFile file, String customKey, String sourceType) {
+        return upload(file, customKey, sourceType, null);
+    }
+
+    public FileRecord upload(MultipartFile file, String customKey, String sourceType, Long userId) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择图片文件");
         if (file.getSize() > maxSize) throw new IllegalArgumentException("图片大小不能超过 10MB");
         if (!ALLOWED_TYPES.contains(file.getContentType())) throw new IllegalArgumentException("只允许上传 JPG、PNG、GIF 或 WEBP 图片");
@@ -94,6 +98,7 @@ public class FileRecordService {
                 record.setFileSize(file.getSize());
                 record.setStatus(1);
                 record.setSourceType(sourceType);
+                record.setUserId(userId);
                 mapper.insert(record);
                 return record;
             }
@@ -126,6 +131,7 @@ public class FileRecordService {
         record.setFileSize(file.getSize());
         record.setStatus(1);
         record.setSourceType(sourceType);
+        record.setUserId(userId);
         try {
             mapper.insert(record);
         } catch (DuplicateKeyException e) {

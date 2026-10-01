@@ -49,6 +49,6 @@ public class UserUgcFileController {
         }
         checkRateLimit();
         // UGC 上传的图片来源标记为 UGC
-        return ApiResponse.success(fileRecordService.upload(file, null, "UGC"));
+        return ApiResponse.success(fileRecordService.upload(file, null, "UGC", userId));
     }
 }
