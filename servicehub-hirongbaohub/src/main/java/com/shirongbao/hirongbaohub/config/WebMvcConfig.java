@@ -23,6 +23,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/posts/ugc/**") // For posting UGC
                 .excludePathPatterns("/api/posts/ugc/user/**") // But viewing is public
                 .addPathPatterns("/api/anniversaries/ugc/**")
-                .addPathPatterns("/api/profile/user/update"); // Profile update requires login
+                .addPathPatterns("/api/profile/user/update") // Profile update requires login
+                .addPathPatterns("/api/hirongbaohub/posts/*/comments");
     }
 }
