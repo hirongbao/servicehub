@@ -36,7 +36,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/api/user/**",
                     "/api/guestbook/**",
                     "/api/posts/ugc/**",
-                    "/api/profile/user/**"
+                    "/api/profile/user/**",
+                    "/api/anniversaries/ugc/**"
                 );
     }
 }
