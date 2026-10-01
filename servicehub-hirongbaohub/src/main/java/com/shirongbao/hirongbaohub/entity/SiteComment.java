@@ -30,5 +30,8 @@ public class SiteComment {
     private LocalDateTime createdAt;
 
     @TableField(exist = false)
+    private String authorAvatar;
+
+    @TableField(exist = false)
     private List<SiteComment> children;
 }

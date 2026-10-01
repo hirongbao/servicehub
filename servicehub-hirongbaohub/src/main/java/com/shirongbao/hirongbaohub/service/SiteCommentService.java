@@ -38,11 +38,22 @@ public class SiteCommentService {
         if (postIds.isEmpty()) {
             return;
         }
-        List<SiteComment> all = mapper.selectList(new LambdaQueryWrapper<SiteComment>()
+        List<SiteComment> all = mapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteComment>()
                 .in(SiteComment::getPostId, postIds)
                 .eq(SiteComment::getStatus, 1) // Only approved
                 .orderByAsc(SiteComment::getCreatedAt)
                 .orderByAsc(SiteComment::getId));
+
+        List<Long> userIds = all.stream().map(SiteComment::getUserId).filter(id -> id != null).distinct().collect(Collectors.toList());
+        if (!userIds.isEmpty()) {
+            java.util.Map<Long, String> avatarMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAvatarUrl));
+            for (SiteComment c : all) {
+                if (c.getUserId() != null && avatarMap.containsKey(c.getUserId())) {
+                    c.setAuthorAvatar(avatarMap.get(c.getUserId()));
+                }
+            }
+        }
 
         // 按 postId 分组后构建树
         Map<Long, List<SiteComment>> byPost = all.stream().collect(Collectors.groupingBy(SiteComment::getPostId));
@@ -88,6 +99,7 @@ public class SiteCommentService {
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setAuthor(user.getAccountName());
+        comment.setAuthorAvatar(user.getAvatarUrl());
         comment.setIpAddress(ipAddress != null && ipAddress.length() > 45 ? ipAddress.substring(0, 45) : ipAddress);
         String commentContent = request.content().trim();
         comment.setContent(commentContent);
@@ -104,20 +116,8 @@ public class SiteCommentService {
 
         mapper.insert(comment);
         
-        try {
-            SitePost post = postMapper.selectById(postId);
-            String postTitle = post != null && post.getContent() != null ? post.getContent() : "未知动态";
-            if (postTitle.length() > 30) {
-                postTitle = postTitle.substring(0, 30) + "...";
-            }
-            String notifyContent = comment.getReplyToAuthor() != null
-                    ? "回复 @" + comment.getReplyToAuthor() + "：" + commentContent
-                    : commentContent;
-            // 因为现在免审核了，所以只做提醒，文案还是复用以前的
-            noticeService.sendNewCommentNotification("hirongbao@qq.com", postTitle, user.getAccountName(), notifyContent, ipAddress);
-        } catch (Exception e) {
-            System.err.println("发送评论通知失败: " + e.getMessage());
-        }
+        // 发送评论通知逻辑已移除
+        
         
         return comment;
     }
