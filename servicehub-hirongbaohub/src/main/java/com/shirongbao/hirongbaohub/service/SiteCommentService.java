@@ -127,7 +127,19 @@ public class SiteCommentService {
         mapper.selectPage(pg, new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteComment>()
                 .orderByDesc(SiteComment::getCreatedAt));
         
-        List<com.shirongbao.hirongbaohub.dto.AdminCommentResponse> list = pg.getRecords().stream().map(c -> {
+        List<SiteComment> records = pg.getRecords();
+        List<Long> userIds = records.stream().map(SiteComment::getUserId).filter(id -> id != null).distinct().collect(Collectors.toList());
+        if (!userIds.isEmpty()) {
+            java.util.Map<Long, String> avatarMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAvatarUrl));
+            for (SiteComment c : records) {
+                if (c.getUserId() != null && avatarMap.containsKey(c.getUserId())) {
+                    c.setAuthorAvatar(avatarMap.get(c.getUserId()));
+                }
+            }
+        }
+        
+        List<com.shirongbao.hirongbaohub.dto.AdminCommentResponse> list = records.stream().map(c -> {
             com.shirongbao.hirongbaohub.entity.SitePost post = postMapper.selectById(c.getPostId());
             String summary = "已删除或不存在的动态";
             if (post != null) {
