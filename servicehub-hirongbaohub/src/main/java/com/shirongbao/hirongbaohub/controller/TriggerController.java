@@ -11,7 +11,7 @@ public class TriggerController {
     
     private final HolidayFetchTask task;
     
-    @GetMapping("/api/trigger-holiday")
+    @GetMapping("/api/hirongbaohub/trigger-holiday")
     public String trigger() {
         task.fetchNextHoliday();
         return "ok";
