@@ -33,10 +33,24 @@ public class HolidayFetchTask {
             List<Map<String, Object>> holidays = response.getBody();
             if (holidays == null || holidays.isEmpty()) return;
 
-            Map<String, Object> nextHoliday = holidays.get(0);
+            LocalDate today = LocalDate.now();
+            Map<String, Object> nextHoliday = null;
+            LocalDate eventDate = null;
+            for (Map<String, Object> h : holidays) {
+                String dStr = (String) h.get("date");
+                LocalDate d = LocalDate.parse(dStr);
+                // 筛选出今天或未来的节假日
+                if (d.isAfter(today) || d.isEqual(today)) {
+                    nextHoliday = h;
+                    eventDate = d;
+                    break;
+                }
+            }
+            
+            if (nextHoliday == null) return;
+
             String localName = (String) nextHoliday.get("localName");
             String dateStr = (String) nextHoliday.get("date"); // YYYY-MM-DD
-            LocalDate eventDate = LocalDate.parse(dateStr);
 
             // 根据日期和标题去重（为了防止同一天有不同记录，主要按日期去重即可）
             boolean exists = service.count(new LambdaQueryWrapper<SiteAnniversary>()
