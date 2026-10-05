@@ -1,6 +1,6 @@
 package com.shirongbao.hirongbaohub.controller;
 
-import com.shirongbao.common.api.ApiResponse;
+import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteNotification;
 import com.shirongbao.hirongbaohub.security.UserContext;
 import com.shirongbao.hirongbaohub.service.SiteNotificationService;
