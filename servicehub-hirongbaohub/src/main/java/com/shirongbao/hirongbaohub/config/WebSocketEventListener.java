@@ -1,6 +1,5 @@
 package com.shirongbao.hirongbaohub.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -10,15 +9,11 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
+@lombok.RequiredArgsConstructor
 public class WebSocketEventListener {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final AtomicInteger onlineCount = new AtomicInteger(0);
-
-    @Autowired
-    public WebSocketEventListener(SimpMessagingTemplate messagingTemplate) {
-        this.messagingTemplate = messagingTemplate;
-    }
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {

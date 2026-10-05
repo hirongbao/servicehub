@@ -6,17 +6,16 @@ import com.shirongbao.hirongbaohub.entity.SiteSubscriber;
 import com.shirongbao.hirongbaohub.mapper.SiteSubscriberMapper;
 import com.shirongbao.hirongbaohub.service.SiteSubscriberService;
 import com.shirongbao.noticehub.service.NoticeService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Random;
 
 @Service
+@lombok.RequiredArgsConstructor
 public class SiteSubscriberServiceImpl extends ServiceImpl<SiteSubscriberMapper, SiteSubscriber> implements SiteSubscriberService {
 
-    @Autowired
-    private NoticeService noticeService;
+    private final NoticeService noticeService;
 
     @Override
     public void requestSubscription(String email) {

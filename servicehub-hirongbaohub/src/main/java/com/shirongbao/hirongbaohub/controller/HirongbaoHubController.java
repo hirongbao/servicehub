@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@lombok.RequiredArgsConstructor
 @RequestMapping("/api/hirongbaohub")
 public class HirongbaoHubController {
     private final SiteProfileService siteProfileService;
@@ -46,18 +47,7 @@ public class HirongbaoHubController {
     private final SiteSubscriberService subscriberService;
     private final SiteArticleService siteArticleService;
 
-    // 初始化个人网站公开接口
-    public HirongbaoHubController(SiteProfileService siteProfileService,
-                                  SitePostService sitePostService,
-                                  SiteReleaseLogService releaseLogService,
-                                  SiteSubscriberService subscriberService,
-                                  SiteArticleService siteArticleService) {
-        this.siteProfileService = siteProfileService;
-        this.sitePostService = sitePostService;
-        this.releaseLogService = releaseLogService;
-        this.subscriberService = subscriberService;
-        this.siteArticleService = siteArticleService;
-    }
+
 
     // 查询站点资料、社交名片与统计数字
     @GetMapping("/profile")
