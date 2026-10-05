@@ -25,10 +25,26 @@ public class AdminCredentialService {
     private static final long RENEW_THRESHOLD_MILLIS = Duration.ofDays(20).toMillis();
     private final byte[] secret;
 
-    // 初始化签名密钥，未配置时使用进程内随机密钥（重启后凭证失效）
+    // 初始化签名密钥，未配置时自动生成随机密钥并持久化到文件，保证重启不失效
     public AdminCredentialService(@Value("${servicehub.admin.secret:}") String configuredSecret) {
-        this.secret = (configuredSecret == null || configuredSecret.isBlank()
-                ? randomSecret() : configuredSecret).getBytes(StandardCharsets.UTF_8);
+        if (configuredSecret != null && !configuredSecret.isBlank()) {
+            this.secret = configuredSecret.getBytes(StandardCharsets.UTF_8);
+        } else {
+            java.nio.file.Path secretFile = java.nio.file.Paths.get(".servicehub_secret");
+            if (java.nio.file.Files.exists(secretFile)) {
+                byte[] loaded = null;
+                try {
+                    loaded = java.nio.file.Files.readString(secretFile).trim().getBytes(StandardCharsets.UTF_8);
+                } catch (Exception ignored) {}
+                this.secret = (loaded != null && loaded.length > 0) ? loaded : randomSecret().getBytes(StandardCharsets.UTF_8);
+            } else {
+                String generated = randomSecret();
+                try {
+                    java.nio.file.Files.writeString(secretFile, generated);
+                } catch (Exception ignored) {}
+                this.secret = generated.getBytes(StandardCharsets.UTF_8);
+            }
+        }
     }
 
     // 签发管理员登录凭证，有效期 30 天
