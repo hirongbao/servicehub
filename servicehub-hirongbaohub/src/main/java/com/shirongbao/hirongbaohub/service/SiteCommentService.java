@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
 import com.shirongbao.hirongbaohub.mapper.SiteCommentMapper;
-import com.shirongbao.noticehub.service.NoticeService;
+
 import com.shirongbao.hirongbaohub.mapper.SitePostMapper;
 import com.shirongbao.hirongbaohub.entity.SitePost;
 import org.springframework.stereotype.Service;
@@ -21,12 +21,12 @@ import java.util.stream.Collectors;
 @Service
 public class SiteCommentService {
     private final SiteCommentMapper mapper;
-    private final NoticeService noticeService;
+    private final SiteNotificationService noticeService;
     private final SitePostMapper postMapper;
     private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
 
     // 初始化评论业务服务
-    public SiteCommentService(SiteCommentMapper mapper, NoticeService noticeService, SitePostMapper postMapper, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
+    public SiteCommentService(SiteCommentMapper mapper, SiteNotificationService noticeService, SitePostMapper postMapper, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
         this.mapper = mapper;
         this.noticeService = noticeService;
         this.postMapper = postMapper;
@@ -116,8 +116,25 @@ public class SiteCommentService {
 
         mapper.insert(comment);
         
-        // 发送评论通知逻辑已移除
-        
+        // 发送评论通知
+        SitePost post = postMapper.selectById(postId);
+        if (post != null) {
+            String summary = commentContent.length() > 20 ? commentContent.substring(0, 20) + "..." : commentContent;
+            Long targetUserId = post.getUserId();
+            
+            // 如果是回复某人，且那人存在，通知被回复的人
+            if (comment.getParentId() != null && targetUserId != null) {
+                SiteComment parent = mapper.selectById(comment.getParentId());
+                if (parent != null && parent.getUserId() != null) {
+                    targetUserId = parent.getUserId();
+                }
+            }
+            
+            // 不要给自己发通知
+            if (targetUserId != null && !targetUserId.equals(userId)) {
+                noticeService.notify(targetUserId, "COMMENT", comment.getId(), user.getAccountName(), summary);
+            }
+        }
         
         return comment;
     }

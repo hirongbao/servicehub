@@ -45,6 +45,7 @@ public class SitePostService {
     private final SiteSubscriberService subscriberService;
     private final NoticeService noticeService;
     private final SiteUserService siteUserService;
+    private final SiteNotificationService siteNotificationService;
     private final ConcurrentHashMap<String, Long> heartbeats = new ConcurrentHashMap<>();
 
     @Value("${noticehub.site.url:https://hrb.design}")
@@ -56,7 +57,7 @@ public class SitePostService {
                            com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper,
                            SiteSubscriberService subscriberService,
                            NoticeService noticeService,
-                           SiteUserService siteUserService) {
+                           SiteUserService siteUserService, SiteNotificationService siteNotificationService) {
         this.mapper = mapper;
         this.mediaMapper = mediaMapper;
         this.commentService = commentService;
@@ -65,6 +66,7 @@ public class SitePostService {
         this.subscriberService = subscriberService;
         this.noticeService = noticeService;
         this.siteUserService = siteUserService;
+        this.siteNotificationService = siteNotificationService;
     }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
@@ -240,6 +242,10 @@ public class SitePostService {
         int next = "unlike".equals(action) ? Math.max(current - 1, 0) : current + 1;
         post.setLikeCount(next);
         mapper.updateById(post);
+        if (!"unlike".equals(action) && post.getUserId() != null) {
+            String summary = post.getContent() != null && post.getContent().length() > 20 ? post.getContent().substring(0, 20) + "..." : "一条动态";
+            siteNotificationService.notify(post.getUserId(), "LIKE", post.getId(), "一位访客", summary);
+        }
         return next;
     }
 
