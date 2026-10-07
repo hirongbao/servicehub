@@ -1,7 +1,7 @@
-/*
+﻿/*
  * auth: hirongbao
  * create: 2026-10-07
- * desc: 站内私信服务
+ * desc: 绔欏唴绉佷俊鏈嶅姟
  */
 package com.shirongbao.hirongbaohub.service;
 
@@ -32,8 +32,7 @@ public class SiteMessageService {
     private final SiteUserMapper userMapper;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // 发送私信
-    @Transactional(rollbackFor = Exception.class)
+    // 鍙戦€佺淇?    @Transactional(rollbackFor = Exception.class)
     public void send(Long senderId, Long receiverId, String content) {
         SiteMessage message = new SiteMessage();
         message.setSenderId(senderId);
@@ -43,19 +42,18 @@ public class SiteMessageService {
         message.setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
 
-        // 通知接收方
-        notifyUnreadCount(receiverId);
+        // 閫氱煡鎺ユ敹鏂?        notifyUnreadCount(receiverId);
     }
 
-    // 获取会话列表
+    // 鑾峰彇浼氳瘽鍒楄〃
     public List<MessageSessionResponse> getSessions(Long userId) {
         return messageMapper.getSessions(userId);
     }
 
-    // 获取聊天历史记录
+    // 鑾峰彇鑱婂ぉ鍘嗗彶璁板綍
     @Transactional(rollbackFor = Exception.class)
     public Page<MessageResponse> getHistory(Long currentUserId, Long otherUserId, int page, int size) {
-        // 更新未读状态为已读
+        // 鏇存柊鏈鐘舵€佷负宸茶
         LambdaUpdateWrapper<SiteMessage> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(SiteMessage::getReceiverId, currentUserId)
                 .eq(SiteMessage::getSenderId, otherUserId)
@@ -63,10 +61,10 @@ public class SiteMessageService {
                 .set(SiteMessage::getIsRead, true);
         messageMapper.update(null, updateWrapper);
 
-        // 获取更新后的总未读数并推送给当前用户
+        // 鑾峰彇鏇存柊鍚庣殑鎬绘湭璇绘暟骞舵帹閫佺粰褰撳墠鐢ㄦ埛
         notifyUnreadCount(currentUserId);
 
-        // 分页查询历史消息
+        // 鍒嗛〉鏌ヨ鍘嗗彶娑堟伅
         Page<SiteMessage> messagePage = new Page<>(page, size);
         LambdaQueryWrapper<SiteMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.nested(i -> i.eq(SiteMessage::getSenderId, currentUserId).eq(SiteMessage::getReceiverId, otherUserId))
@@ -75,15 +73,15 @@ public class SiteMessageService {
         
         messageMapper.selectPage(messagePage, queryWrapper);
 
-        // 转换 DTO
+        // 杞崲 DTO
         Page<MessageResponse> responsePage = new Page<>(page, size, messagePage.getTotal());
         
-        // 批量查询用户信息
+        // 鎵归噺鏌ヨ鐢ㄦ埛淇℃伅
         List<Long> userIds = messagePage.getRecords().stream()
                 .map(SiteMessage::getSenderId)
                 .distinct()
                 .toList();
-        Map<Long, SiteUser> userMap = userMapper.selectBatchIds(userIds).stream()
+        Map<Long, SiteUser> userMap = userIds.isEmpty() ? java.util.Collections.emptyMap() : userMapper.selectBatchIds(userIds).stream()
                 .collect(Collectors.toMap(SiteUser::getId, u -> u));
 
         List<MessageResponse> dtos = messagePage.getRecords().stream().map(msg -> {
@@ -106,7 +104,7 @@ public class SiteMessageService {
         return responsePage;
     }
 
-    // 获取总未读数
+    // 鑾峰彇鎬绘湭璇绘暟
     public long getUnreadCount(Long userId) {
         LambdaQueryWrapper<SiteMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SiteMessage::getReceiverId, userId)
@@ -114,7 +112,7 @@ public class SiteMessageService {
         return messageMapper.selectCount(queryWrapper);
     }
 
-    // 发送 WebSocket 未读消息通知
+    // 鍙戦€?WebSocket 鏈娑堟伅閫氱煡
     private void notifyUnreadCount(Long userId) {
         long unreadCount = getUnreadCount(userId);
         Map<String, Object> payload = Map.of(
@@ -124,3 +122,4 @@ public class SiteMessageService {
         messagingTemplate.convertAndSend("/topic/notify/" + userId, payload);
     }
 }
+
