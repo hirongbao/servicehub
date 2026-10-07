@@ -46,11 +46,11 @@ public class SiteCommentService {
 
         List<Long> userIds = all.stream().map(SiteComment::getUserId).filter(id -> id != null).distinct().collect(Collectors.toList());
         if (!userIds.isEmpty()) {
-            java.util.Map<Long, String> avatarMap = userMapper.selectBatchIds(userIds).stream()
-                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAvatarUrl));
+                        java.util.Map<Long, com.shirongbao.hirongbaohub.entity.SiteUser> userMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, u -> u));
             for (SiteComment c : all) {
-                if (c.getUserId() != null && avatarMap.containsKey(c.getUserId())) {
-                    c.setAuthorAvatar(avatarMap.get(c.getUserId()));
+                if (c.getUserId() != null && userMap.containsKey(c.getUserId())) {
+                    c.setAuthorAvatar(userMap.get(c.getUserId()).getAvatarUrl());
                 }
             }
         }
@@ -147,11 +147,11 @@ public class SiteCommentService {
         List<SiteComment> records = pg.getRecords();
         List<Long> userIds = records.stream().map(SiteComment::getUserId).filter(id -> id != null).distinct().collect(Collectors.toList());
         if (!userIds.isEmpty()) {
-            java.util.Map<Long, String> avatarMap = userMapper.selectBatchIds(userIds).stream()
-                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, com.shirongbao.hirongbaohub.entity.SiteUser::getAvatarUrl));
+                        java.util.Map<Long, com.shirongbao.hirongbaohub.entity.SiteUser> userMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(com.shirongbao.hirongbaohub.entity.SiteUser::getId, u -> u));
             for (SiteComment c : records) {
-                if (c.getUserId() != null && avatarMap.containsKey(c.getUserId())) {
-                    c.setAuthorAvatar(avatarMap.get(c.getUserId()));
+                if (c.getUserId() != null && userMap.containsKey(c.getUserId())) {
+                    c.setAuthorAvatar(userMap.get(c.getUserId()).getAvatarUrl());
                 }
             }
         }
