@@ -53,9 +53,7 @@ public class SiteProfileService {
                 .map(s -> new ProfileResponse.SocialItem(s.getPlatform(), s.getIconName(), s.getUrl(), s.getQrCodeUrl()))
                 .toList();
         long publishedPosts = postMapper.selectCount(new LambdaQueryWrapper<SitePost>().eq(SitePost::getStatus, 1));
-        long rawCount = visitorMapper.selectList(null).stream()
-                .mapToLong(v -> v.getVisitCount() == null ? 1 : v.getVisitCount())
-                .sum();
+        long rawCount = visitorMapper.sumVisitCount();
         long totalVisitors = 744 + (rawCount * 3);
         ProfileResponse.Stats stats = new ProfileResponse.Stats(
                 (int) publishedPosts, totalVisitors, profile.getStatFollowing());

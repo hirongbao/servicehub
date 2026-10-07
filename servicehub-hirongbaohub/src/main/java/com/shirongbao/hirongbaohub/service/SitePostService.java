@@ -187,9 +187,7 @@ public class SitePostService {
         heartbeats.entrySet().removeIf(entry -> now - entry.getValue() > HEARTBEAT_TTL_MILLIS);
         recordVisit(visitorId);
         int actual = heartbeats.size();
-        long rawCount = visitorMapper.selectList(null).stream()
-                .mapToLong(v -> v.getVisitCount() == null ? 1 : v.getVisitCount())
-                .sum();
+        long rawCount = visitorMapper.sumVisitCount();
         long totalVisitors = 744 + (rawCount * 3);
         int display = displayOnlineCount(actual, totalVisitors);
         return Map.of("onlineCount", display, "actualOnlineCount", actual, "totalVisitors", totalVisitors);
