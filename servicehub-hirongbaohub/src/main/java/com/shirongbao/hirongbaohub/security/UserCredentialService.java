@@ -19,8 +19,24 @@ public class UserCredentialService {
     private final byte[] secret;
 
     public UserCredentialService(@Value("${servicehub.jwt.secret:}") String configuredSecret) {
-        this.secret = (configuredSecret == null || configuredSecret.isBlank()
-                ? randomSecret() : configuredSecret).getBytes(StandardCharsets.UTF_8);
+        if (configuredSecret != null && !configuredSecret.isBlank()) {
+            this.secret = configuredSecret.getBytes(StandardCharsets.UTF_8);
+        } else {
+            java.nio.file.Path secretFile = java.nio.file.Paths.get(".servicehub_user_secret");
+            if (java.nio.file.Files.exists(secretFile)) {
+                byte[] loaded = null;
+                try {
+                    loaded = java.nio.file.Files.readString(secretFile).trim().getBytes(StandardCharsets.UTF_8);
+                } catch (Exception ignored) {}
+                this.secret = (loaded != null && loaded.length > 0) ? loaded : randomSecret().getBytes(StandardCharsets.UTF_8);
+            } else {
+                String generated = randomSecret();
+                try {
+                    java.nio.file.Files.writeString(secretFile, generated);
+                } catch (Exception ignored) {}
+                this.secret = generated.getBytes(StandardCharsets.UTF_8);
+            }
+        }
     }
 
     public String issue(Long userId, String role) {
