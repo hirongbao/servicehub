@@ -41,14 +41,14 @@
                SUM(CASE WHEN status_code &gt;= 400 THEN 1 ELSE 0 END) AS error_count,
                COUNT(DISTINCT client_ip) AS unique_ips
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
     </select>
 
     <select id="getHourlyTrend" resultType="map">
         SELECT to_char(created_at, 'YYYY-MM-DD HH24:00') AS hour, COUNT(*) AS count
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
-        GROUP BY hour ORDER BY hour
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
+        GROUP BY 1 ORDER BY 1
     </select>
 
     <select id="getStatusDistribution" resultType="map">
@@ -59,22 +59,22 @@
                  WHEN status_code &gt;= 500 THEN '5xx' ELSE 'other' END AS status_group, 
                COUNT(*) AS count 
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
-        GROUP BY status_group ORDER BY status_group
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
+        GROUP BY 1 ORDER BY 1
     </select>
 
     <select id="getTopPaths" resultType="map">
         SELECT path, COUNT(*) AS count, ROUND(AVG(duration_ms), 1) AS avg_ms 
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR') 
         GROUP BY path ORDER BY count DESC LIMIT 10
     </select>
 
     <select id="getTopIps" resultType="map">
         SELECT text(client_ip) AS ip_address, COUNT(*) AS count, MAX(created_at) AS last_seen 
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
-        GROUP BY client_ip ORDER BY count DESC LIMIT 10
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR') 
+        GROUP BY text(client_ip) ORDER BY count DESC LIMIT 10
     </select>
 
     <select id="getLatencyDistribution" resultType="map">
@@ -86,8 +86,8 @@
                  ELSE '&gt;1s' END AS bracket, 
                COUNT(*) AS count 
         FROM http_request_logs 
-        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
-        GROUP BY bracket ORDER BY array_position(ARRAY['&lt;50ms', '50-200ms', '200-500ms', '500ms-1s', '&gt;1s']::text[], bracket)
+        WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR') 
+        GROUP BY 1 ORDER BY MIN(duration_ms)
     </select>
 
     <!-- IP specific endpoints -->
@@ -102,7 +102,7 @@
                MIN(created_at) AS first_seen,
                MAX(created_at) AS last_seen
         FROM http_request_logs 
-        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
     </select>
 
     <select id="getIpStatusDistribution" resultType="map">
@@ -113,27 +113,27 @@
                  WHEN status_code &gt;= 500 THEN '5xx' ELSE 'other' END AS status_group, 
                COUNT(*) AS count 
         FROM http_request_logs 
-        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
-        GROUP BY status_group ORDER BY status_group
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
+        GROUP BY 1 ORDER BY 1
     </select>
 
     <select id="getIpTopPaths" resultType="map">
         SELECT path, COUNT(*) AS count, ROUND(AVG(duration_ms), 1) AS avg_ms,
                SUM(CASE WHEN status_code &gt;= 400 THEN 1 ELSE 0 END) AS error_count
         FROM http_request_logs 
-        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
         GROUP BY path ORDER BY count DESC LIMIT 20
     </select>
 
     <select id="getIpTimeDistribution" resultType="map">
         SELECT ${timeBucketExpr} AS time_bucket, COUNT(*) AS count 
         FROM http_request_logs 
-        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
-        GROUP BY time_bucket ORDER BY time_bucket
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
+        GROUP BY 1 ORDER BY 1
     </select>
 
     <sql id="ipLogConditions">
-        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
         <if test="method != null and method != ''"> AND method = #{method}</if>
         <if test="path != null and path != ''"> AND path LIKE CONCAT('%', #{path}, '%')</if>
         <if test="statusGroup == '2xx'"> AND status_code &gt;= 200 AND status_code &lt; 300</if>
@@ -156,3 +156,11 @@
         ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
     </select>
 </mapper>
+
+
+
+
+
+
+
+
