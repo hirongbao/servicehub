@@ -5,7 +5,10 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 import java.util.Map;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
+
 @Mapper
+@DS("pg")
 public interface HttpRequestLogMapper {
 
     void insertLog(@Param("clientIp") String clientIp,
