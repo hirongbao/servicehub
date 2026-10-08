@@ -11,6 +11,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.shirongbao.admin.security.AdminCredentialService;
+import com.shirongbao.hirongbaohub.security.UserCredentialService;
+import com.shirongbao.hirongbaohub.service.SiteUserService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -24,9 +27,18 @@ public class RequestLogInterceptor implements HandlerInterceptor {
     private static final String START_ATTR = RequestLogInterceptor.class.getName() + ".start";
     private final JdbcTemplate jdbcTemplate;
     private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final AdminCredentialService adminCredentials;
+    private final UserCredentialService userCredentials;
+    private final SiteUserService siteUserService;
 
-    public RequestLogInterceptor(JdbcTemplate jdbcTemplate) {
+    public RequestLogInterceptor(JdbcTemplate jdbcTemplate,
+                                 AdminCredentialService adminCredentials,
+                                 UserCredentialService userCredentials,
+                                 SiteUserService siteUserService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.adminCredentials = adminCredentials;
+        this.userCredentials = userCredentials;
+        this.siteUserService = siteUserService;
     }
 
     // 记录请求开始时间
@@ -49,6 +61,29 @@ public class RequestLogInterceptor implements HandlerInterceptor {
         Object userIdObj = request.getAttribute("auth.userId");
         if (userIdObj instanceof Long) {
             userId = (Long) userIdObj;
+        } else {
+            String credential = request.getHeader("Authorization");
+            if (credential != null && credential.startsWith("Bearer ")) {
+                credential = credential.substring(7).trim();
+            } else {
+                String legacy = request.getHeader("satoken");
+                credential = legacy == null ? credential : legacy.trim();
+            }
+            if (credential != null && !credential.isEmpty()) {
+                try {
+                    String adminUser = adminCredentials.resolveUsername(credential);
+                    if (adminUser != null) {
+                        userId = siteUserService.getAdminUserId();
+                    } else {
+                        UserCredentialService.Parsed parsed = userCredentials.verifyAndParse(credential);
+                        if (parsed != null) {
+                            userId = parsed.userId();
+                        }
+                    }
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
         }
 
         log.info("{} {} {} {}ms ip={} user={} token={}",
