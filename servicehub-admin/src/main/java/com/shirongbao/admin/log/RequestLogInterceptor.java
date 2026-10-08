@@ -18,6 +18,10 @@ import com.shirongbao.hirongbaohub.security.UserCredentialService;
 import com.shirongbao.hirongbaohub.service.SiteUserService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.ContentCachingResponseWrapper;
+import java.nio.charset.StandardCharsets;
+
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -86,14 +90,43 @@ public class RequestLogInterceptor implements HandlerInterceptor {
 
         // 健康检查不持久化，避免无意义日志占用磁盘
         if (uri != null && !uri.equals("/api/health") && !uri.startsWith("/api/health/")) {
+            String reqBody = null;
+            if (request instanceof ContentCachingRequestWrapper wrapper) {
+                byte[] buf = wrapper.getContentAsByteArray();
+                if (buf.length > 0) {
+                    reqBody = new String(buf, StandardCharsets.UTF_8);
+                    if (reqBody.length() > 2000) reqBody = reqBody.substring(0, 2000) + "...";
+                }
+            }
+            String respBody = null;
+            if (response instanceof ContentCachingResponseWrapper wrapper) {
+                byte[] buf = wrapper.getContentAsByteArray();
+                if (buf.length > 0) {
+                    respBody = new String(buf, StandardCharsets.UTF_8);
+                    if (respBody.length() > 2000) respBody = respBody.substring(0, 2000) + "...";
+                }
+            }
+            String errorMsg = null;
+            if (ex != null) {
+                errorMsg = ex.getMessage();
+            } else {
+                Exception dispatchEx = (Exception) request.getAttribute("jakarta.servlet.error.exception");
+                if (dispatchEx != null) errorMsg = dispatchEx.getMessage();
+                else {
+                    Object msg = request.getAttribute("jakarta.servlet.error.message");
+                    if (msg != null) errorMsg = msg.toString();
+                }
+            }
+            if (errorMsg != null && errorMsg.length() > 2000) errorMsg = errorMsg.substring(0, 2000);
+
             recordAccessLog(clientIp, request.getMethod(), uri, query, response.getStatus(), costMs,
-                    request.getHeader("User-Agent"), request.getHeader("Referer"), userId);
+                    request.getHeader("User-Agent"), request.getHeader("Referer"), userId, reqBody, respBody, errorMsg);
         }
     }
 
     // 异步记录访问日志至数据库，静默捕获异常防止影响业务
     private void recordAccessLog(String ip, String method, String path, String query,
-                                int status, long costMs, String ua, String referer, Long userId) {
+                                int status, long costMs, String ua, String referer, Long userId, String requestBody, String responseBody, String errorMessage) {
         if (logMapper == null) return;
         asyncExecutor.execute(() -> {
             try {
@@ -101,9 +134,8 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 String safeQuery = query != null && query.length() > 1024 ? query.substring(0, 1024) : query;
                 String safeUa = ua != null && ua.length() > 512 ? ua.substring(0, 512) : ua;
                 String safeRef = referer != null && referer.length() > 512 ? referer.substring(0, 512) : referer;
-                logMapper.insertLog(ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId);
+                logMapper.insertLog(ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId, requestBody, responseBody, errorMessage);
             } catch (Exception ignored) {
-                // 数据库迁移尚未完成或连接断开时不阻塞请求
             }
         });
     }

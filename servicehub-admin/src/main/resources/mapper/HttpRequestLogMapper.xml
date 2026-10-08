@@ -3,8 +3,8 @@
 <mapper namespace="com.shirongbao.admin.mapper.HttpRequestLogMapper">
 
     <insert id="insertLog">
-        INSERT INTO http_request_logs (client_ip, method, path, query_params, status_code, duration_ms, request_headers, user_id)
-        VALUES (#{clientIp}::inet, #{method}, #{path}, jsonb_build_object('raw', #{queryParams}::text), #{statusCode}, #{durationMs}, jsonb_build_object('User-Agent', #{userAgent}::text, 'Referer', #{referer}::text), #{userId})
+        INSERT INTO http_request_logs (client_ip, method, path, query_params, status_code, duration_ms, request_headers, user_id, request_body, response_body, error_message)
+        VALUES (#{clientIp}::inet, #{method}, #{path}, jsonb_build_object('raw', #{queryParams}::text), #{statusCode}, #{durationMs}, jsonb_build_object('User-Agent', #{userAgent}::text, 'Referer', #{referer}::text), #{userId}, #{requestBody}, #{responseBody}, #{errorMessage})
     </insert>
 
     <sql id="logConditions">
@@ -29,7 +29,7 @@
     <select id="selectLogs" resultType="map">
         SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
                duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
-               user_id, created_at 
+               user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs
         <include refid="logConditions"/>
         ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
@@ -150,12 +150,14 @@
     <select id="selectIpLogs" resultType="map">
         SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
                duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
-               user_id, created_at 
+               user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs
         <include refid="ipLogConditions"/>
         ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
     </select>
 </mapper>
+
+
 
 
 

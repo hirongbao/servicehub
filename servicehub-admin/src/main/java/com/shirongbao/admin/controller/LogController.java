@@ -43,6 +43,12 @@ public class LogController {
         
         long total = logMapper.countLogs(ip, method, path, statusCode, statusMin, statusMax, startTime, endTime, minCostMs);
         List<Map<String, Object>> list = logMapper.selectLogs(ip, method, path, statusCode, statusMin, statusMax, startTime, endTime, minCostMs, offset, size);
+        for (Map<String, Object> row : list) {
+            String ipAddr = (String) row.get("ip_address");
+            if (ipAddr != null) {
+                row.put("region", IpRegionUtils.getRegion(ipAddr));
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("list", list);
@@ -108,6 +114,12 @@ public class LogController {
 
         long total = logMapper.countIpLogs(ip, method, path, statusGroup, intervalHours);
         List<Map<String, Object>> list = logMapper.selectIpLogs(ip, method, path, statusGroup, intervalHours, offset, size);
+        for (Map<String, Object> row : list) {
+            String ipAddr = (String) row.get("ip_address");
+            if (ipAddr != null) {
+                row.put("region", IpRegionUtils.getRegion(ipAddr));
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("list", list);

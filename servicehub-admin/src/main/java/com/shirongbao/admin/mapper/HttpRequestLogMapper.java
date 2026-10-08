@@ -19,7 +19,7 @@ public interface HttpRequestLogMapper {
                    @Param("durationMs") long durationMs,
                    @Param("userAgent") String userAgent,
                    @Param("referer") String referer,
-                   @Param("userId") Long userId);
+                   @Param("userId") Long userId, @Param("requestBody") String requestBody, @Param("responseBody") String responseBody, @Param("errorMessage") String errorMessage);
 
     long countLogs(@Param("ip") String ip,
                    @Param("method") String method,
@@ -71,3 +71,4 @@ public interface HttpRequestLogMapper {
                                            @Param("offset") int offset,
                                            @Param("size") int size);
 }
+
