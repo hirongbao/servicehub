@@ -109,7 +109,8 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 String safeUa = ua != null && ua.length() > 512 ? ua.substring(0, 512) : ua;
                 String safeRef = referer != null && referer.length() > 512 ? referer.substring(0, 512) : referer;
                 jdbcTemplate.update(
-                        "INSERT INTO access_log (ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO http_request_logs (client_ip, method, path, query_params, status_code, duration_ms, request_headers, user_id) " +
+                        "VALUES (?::inet, ?, ?, jsonb_build_object('raw', ?::text), ?, ?, jsonb_build_object('User-Agent', ?::text, 'Referer', ?::text), ?)",
                         ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId
                 );
             } catch (Exception ignored) {

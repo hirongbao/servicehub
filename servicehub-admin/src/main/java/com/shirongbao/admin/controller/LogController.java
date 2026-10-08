@@ -58,7 +58,7 @@ public class LogController {
         List<Object> params = new ArrayList<>();
 
         if (ip != null && !ip.isBlank()) {
-            where.append(" AND ip_address LIKE ?");
+            where.append(" AND text(client_ip) LIKE ?");
             params.add("%" + ip.trim() + "%");
         }
         if (method != null && !method.isBlank()) {
@@ -91,14 +91,14 @@ public class LogController {
             params.add(endTime.trim());
         }
         if (minCostMs != null) {
-            where.append(" AND cost_ms >= ?");
+            where.append(" AND duration_ms >= ?");
             params.add(minCostMs);
         }
 
-        String countSql = "SELECT COUNT(*) FROM access_log " + where;
+        String countSql = "SELECT COUNT(*) FROM http_request_logs " + where;
         Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
 
-        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id, created_at FROM access_log "
+        String dataSql = "SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, user_id, created_at FROM http_request_logs "
                 + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
         List<Object> dataParams = new ArrayList<>(params);
         dataParams.add(size);
@@ -129,16 +129,16 @@ public class LogController {
         // 基础统计：总请求、平均耗时、错误数、独立 IP
         Map<String, Object> summary = jdbcTemplate.queryForMap(
                 "SELECT COUNT(*) AS total_requests, " +
-                "ROUND(AVG(cost_ms), 1) AS avg_cost_ms, " +
+                "ROUND(AVG(duration_ms), 1) AS avg_cost_ms, " +
                 "SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) AS error_count, " +
                 "COUNT(DISTINCT ip_address) AS unique_ips " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR)");
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR'");
         stats.put("summary", summary);
 
         // 每小时请求量趋势
         List<Map<String, Object>> hourly = jdbcTemplate.queryForList(
-                "SELECT DATE_FORMAT(created_at, '%Y-%m-%d %H:00') AS hour, COUNT(*) AS count " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "SELECT to_char(created_at, 'YYYY-MM-DD HH24:00') AS hour, COUNT(*) AS count " +
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY hour ORDER BY hour");
         stats.put("hourlyTrend", hourly);
 
@@ -150,23 +150,23 @@ public class LogController {
                 "WHEN status_code >= 400 AND status_code < 500 THEN '4xx' " +
                 "WHEN status_code >= 500 THEN '5xx' ELSE 'other' END AS status_group, " +
                 "COUNT(*) AS count " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY status_group ORDER BY status_group");
         stats.put("statusDistribution", statusDist);
 
         // Top 10 路径
         List<Map<String, Object>> topPaths = jdbcTemplate.queryForList(
-                "SELECT path, COUNT(*) AS count, ROUND(AVG(cost_ms), 1) AS avg_ms " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "SELECT path, COUNT(*) AS count, ROUND(AVG(duration_ms), 1) AS avg_ms " +
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY path ORDER BY count DESC LIMIT 10");
         stats.put("topPaths", topPaths);
 
         // Top 10 IP
         List<Map<String, Object>> topIps = jdbcTemplate.queryForList(
-                "SELECT ip_address, COUNT(*) AS count, " +
+                "SELECT text(client_ip) AS ip_address, COUNT(*) AS count, " +
                 "MAX(created_at) AS last_seen " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
-                "GROUP BY ip_address ORDER BY count DESC LIMIT 10");
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
+                "GROUP BY client_ip ORDER BY count DESC LIMIT 10");
         for (Map<String, Object> row : topIps) {
             String ipAddr = (String) row.get("ip_address");
             row.put("region", IpRegionUtils.getRegion(ipAddr));
@@ -176,13 +176,13 @@ public class LogController {
         // 耗时分布
         List<Map<String, Object>> latencyDist = jdbcTemplate.queryForList(
                 "SELECT CASE " +
-                "WHEN cost_ms < 50 THEN '<50ms' " +
-                "WHEN cost_ms < 200 THEN '50-200ms' " +
-                "WHEN cost_ms < 500 THEN '200-500ms' " +
-                "WHEN cost_ms < 1000 THEN '500ms-1s' " +
+                "WHEN duration_ms < 50 THEN '<50ms' " +
+                "WHEN duration_ms < 200 THEN '50-200ms' " +
+                "WHEN duration_ms < 500 THEN '200-500ms' " +
+                "WHEN duration_ms < 1000 THEN '500ms-1s' " +
                 "ELSE '>1s' END AS bracket, COUNT(*) AS count " +
-                "FROM access_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
-                "GROUP BY bracket ORDER BY FIELD(bracket, '<50ms', '50-200ms', '200-500ms', '500ms-1s', '>1s')");
+                "FROM http_request_logs WHERE created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
+                "GROUP BY bracket ORDER BY array_position(ARRAY['<50ms', '50-200ms', '200-500ms', '500ms-1s', '>1s']::text[], bracket)");
         stats.put("latencyDistribution", latencyDist);
 
         return ApiResponse.success(stats);
@@ -196,12 +196,12 @@ public class LogController {
 
         String interval = "24h".equals(range) ? "24" : "168";
         String timeBucket = "24h".equals(range)
-                ? "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i')" // per-minute for 24h, grouped later
-                : "DATE_FORMAT(created_at, '%Y-%m-%d %H:00')";
+                ? "to_char(created_at, 'YYYY-MM-DD HH24:MI')" // per-minute for 24h, grouped later
+                : "to_char(created_at, 'YYYY-MM-DD HH24:00')";
         // For 24h use 5-minute buckets; for 7d use 1-hour buckets
         String timeBucketExpr = "24h".equals(range)
                 ? "CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(FLOOR(MINUTE(created_at)/5)*5, 2, '0'))"
-                : "DATE_FORMAT(created_at, '%Y-%m-%d %H:00')";
+                : "to_char(created_at, 'YYYY-MM-DD HH24:00')";
 
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -211,12 +211,12 @@ public class LogController {
                 "SUM(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 ELSE 0 END) AS success_count, " +
                 "SUM(CASE WHEN status_code >= 400 AND status_code < 500 THEN 1 ELSE 0 END) AS error_4xx, " +
                 "SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END) AS error_5xx, " +
-                "ROUND(AVG(cost_ms), 1) AS avg_cost_ms, " +
-                "MAX(cost_ms) AS max_cost_ms, " +
+                "ROUND(AVG(duration_ms), 1) AS avg_cost_ms, " +
+                "MAX(duration_ms) AS max_cost_ms, " +
                 "COUNT(DISTINCT path) AS unique_paths, " +
                 "MIN(created_at) AS first_seen, " +
                 "MAX(created_at) AS last_seen " +
-                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR)",
+                "FROM http_request_logs WHERE client_ip = ?::inet AND created_at >= NOW() - INTERVAL '\" + interval + \" HOUR'",
                 ip);
         result.put("summary", summary);
 
@@ -231,7 +231,7 @@ public class LogController {
                 "WHEN status_code >= 400 AND status_code < 500 THEN '4xx' " +
                 "WHEN status_code >= 500 THEN '5xx' ELSE 'other' END AS status_group, " +
                 "COUNT(*) AS count " +
-                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "FROM http_request_logs WHERE client_ip = ?::inet AND created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY status_group ORDER BY status_group",
                 ip);
         result.put("statusDistribution", statusDist);
@@ -239,9 +239,9 @@ public class LogController {
         // Top paths with error count
         List<Map<String, Object>> topPaths = jdbcTemplate.queryForList(
                 "SELECT path, COUNT(*) AS count, " +
-                "ROUND(AVG(cost_ms), 1) AS avg_ms, " +
+                "ROUND(AVG(duration_ms), 1) AS avg_ms, " +
                 "SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) AS error_count " +
-                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "FROM http_request_logs WHERE client_ip = ?::inet AND created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY path ORDER BY count DESC LIMIT 20",
                 ip);
         result.put("topPaths", topPaths);
@@ -249,7 +249,7 @@ public class LogController {
         // Time distribution (5min buckets for 24h, 1h buckets for 7d)
         List<Map<String, Object>> timeDist = jdbcTemplate.queryForList(
                 "SELECT " + timeBucketExpr + " AS time_bucket, COUNT(*) AS count " +
-                "FROM access_log WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR) " +
+                "FROM http_request_logs WHERE client_ip = ?::inet AND created_at >= NOW() - INTERVAL '\" + interval + \" HOUR' " +
                 "GROUP BY time_bucket ORDER BY time_bucket",
                 ip);
         result.put("timeDistribution", timeDist);
@@ -272,7 +272,7 @@ public class LogController {
         int offset = (Math.max(1, page) - 1) * size;
         String interval = "24h".equals(range) ? "24" : "168";
 
-        StringBuilder where = new StringBuilder("WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL " + interval + " HOUR)");
+        StringBuilder where = new StringBuilder("WHERE client_ip = ?::inet AND created_at >= NOW() - INTERVAL '\" + interval + \" HOUR'");
         List<Object> params = new ArrayList<>();
         params.add(ip);
 
@@ -293,10 +293,10 @@ public class LogController {
             }
         }
 
-        String countSql = "SELECT COUNT(*) FROM access_log " + where;
+        String countSql = "SELECT COUNT(*) FROM http_request_logs " + where;
         Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
 
-        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id, created_at FROM access_log "
+        String dataSql = "SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, user_id, created_at FROM http_request_logs "
                 + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
         List<Object> dataParams = new ArrayList<>(params);
         dataParams.add(size);
