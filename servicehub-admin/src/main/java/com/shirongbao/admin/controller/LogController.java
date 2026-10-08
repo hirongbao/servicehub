@@ -1,4 +1,4 @@
-﻿package com.shirongbao.admin.controller;
+package com.shirongbao.admin.controller;
 
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.admin.mapper.HttpRequestLogMapper;
