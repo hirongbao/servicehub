@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.hirongbaohub.dto.UserLoginRequest;
 import com.shirongbao.hirongbaohub.dto.UserRegisterRequest;
@@ -21,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SiteUserService {
     private final SiteUserMapper mapper;
     private final NoticeService noticeService;
@@ -42,14 +45,6 @@ public class SiteUserService {
     );
 
     private volatile Long cachedAdminId;
-
-    public SiteUserService(SiteUserMapper mapper, NoticeService noticeService, 
-                           StringRedisTemplate redisTemplate, UserCredentialService credentialService) {
-        this.mapper = mapper;
-        this.noticeService = noticeService;
-        this.redisTemplate = redisTemplate;
-        this.credentialService = credentialService;
-    }
 
     /**
      * 获取站长（ADMIN）的 user_id，带内存缓存。

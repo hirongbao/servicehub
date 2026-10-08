@@ -1,5 +1,7 @@
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteArticle;
@@ -8,12 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/articles")
+@RequiredArgsConstructor
 public class AdminArticleController {
     private final SiteArticleService service;
-
-    public AdminArticleController(SiteArticleService service) {
-        this.service = service;
-    }
 
     @GetMapping
     public ApiResponse<IPage<SiteArticle>> list(@RequestParam(defaultValue = "1") int page,

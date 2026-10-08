@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.common.response.ApiResponse;
@@ -13,17 +15,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/guestbook")
+@RequiredArgsConstructor
 public class SiteGuestbookController {
     
     private final SiteGuestbookService guestbookService;
     private final SiteUserMapper userMapper;
     private final SiteUserService siteUserService;
-
-    public SiteGuestbookController(SiteGuestbookService guestbookService, SiteUserMapper userMapper, SiteUserService siteUserService) {
-        this.guestbookService = guestbookService;
-        this.userMapper = userMapper;
-        this.siteUserService = siteUserService;
-    }
 
     private Long getAdminUserId() {
         return siteUserService.getAdminUserId();

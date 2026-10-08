@@ -5,6 +5,8 @@
  */
 package com.shirongbao.linkhub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.util.IpUtils;
 import com.shirongbao.linkhub.entity.ShortLink;
 import com.shirongbao.linkhub.service.ShortLinkService;
@@ -20,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 
 @RestController
+@RequiredArgsConstructor
 public class RedirectController {
     private static final String NOT_FOUND_PAGE = """
             <!DOCTYPE html>
@@ -29,11 +32,6 @@ public class RedirectController {
             <body><div class="box"><h1>404</h1><p>链接不存在或已失效</p></div></body></html>
             """;
     private final ShortLinkService service;
-
-    // 初始化短链跳转控制器
-    public RedirectController(ShortLinkService service) {
-        this.service = service;
-    }
 
     // 处理短链跳转，记录访问并 302 到目标地址
     @GetMapping("/s/{code}")

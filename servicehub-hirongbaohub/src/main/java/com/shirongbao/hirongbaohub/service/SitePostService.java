@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
@@ -31,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class SitePostService {
     private static final Set<String> MEDIA_TYPES = Set.of("image", "video");
     private static final int MAX_IMAGES = 9;
@@ -50,24 +53,6 @@ public class SitePostService {
 
     @Value("${noticehub.site.url:https://hrb.design}")
     private String siteUrl;
-
-    // 初始化动态业务服务
-    public SitePostService(SitePostMapper mapper, SitePostMediaMapper mediaMapper, SiteCommentService commentService,
-                           com.shirongbao.hirongbaohub.mapper.SiteVisitorMapper visitorMapper,
-                           com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper,
-                           SiteSubscriberService subscriberService,
-                           NoticeService noticeService,
-                           SiteUserService siteUserService, SiteNotificationService siteNotificationService) {
-        this.mapper = mapper;
-        this.mediaMapper = mediaMapper;
-        this.commentService = commentService;
-        this.visitorMapper = visitorMapper;
-        this.userMapper = userMapper;
-        this.subscriberService = subscriberService;
-        this.noticeService = noticeService;
-        this.siteUserService = siteUserService;
-        this.siteNotificationService = siteNotificationService;
-    }
 
     // 查询全部动态及其媒体列表（管理端，按发布时间倒序）
     public List<SitePost> list() {

@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.ProfileResponse;
 import com.shirongbao.hirongbaohub.dto.ProfileUpdateRequest;
@@ -21,20 +23,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SiteProfileService {
     private final SiteProfileMapper profileMapper;
     private final SiteSocialMapper socialMapper;
     private final SitePostMapper postMapper;
     private final SiteVisitorMapper visitorMapper;
-
-    // 初始化站点资料服务
-    public SiteProfileService(SiteProfileMapper profileMapper, SiteSocialMapper socialMapper, SitePostMapper postMapper,
-                              SiteVisitorMapper visitorMapper) {
-        this.profileMapper = profileMapper;
-        this.socialMapper = socialMapper;
-        this.postMapper = postMapper;
-        this.visitorMapper = visitorMapper;
-    }
 
     // 查询启用中的站点资料与社交名片
     public ProfileResponse getProfile() {

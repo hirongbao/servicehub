@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.authhub.dto.TokenCreateRequest;
 import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.service.ServiceTokenService;
@@ -25,13 +27,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tokens")
+@RequiredArgsConstructor
 public class TokenController {
     private final ServiceTokenService service;
-
-    // 初始化 Token 管理服务
-    public TokenController(ServiceTokenService service) {
-        this.service = service;
-    }
 
     // 分页并筛选查询服务 Token 列表（默认不查不可用凭证）
     @GetMapping

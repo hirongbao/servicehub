@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteUser;
@@ -23,14 +25,10 @@ import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/profile/user")
+@RequiredArgsConstructor
 public class UserProfileController {
     private final SiteUserMapper userMapper;
     private final SiteProfileService siteProfileService;
-
-    public UserProfileController(SiteUserMapper userMapper, SiteProfileService siteProfileService) {
-        this.userMapper = userMapper;
-        this.siteProfileService = siteProfileService;
-    }
 
     @GetMapping("/{accountName}")
     public ApiResponse<Object> getUserProfile(@PathVariable String accountName) {

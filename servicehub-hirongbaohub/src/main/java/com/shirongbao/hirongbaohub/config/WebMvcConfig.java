@@ -1,17 +1,16 @@
 package com.shirongbao.hirongbaohub.config;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.hirongbaohub.security.UserAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration("hirongbaohubWebMvcConfig")
+@RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
     private final UserAuthInterceptor authInterceptor;
-
-    public WebMvcConfig(UserAuthInterceptor authInterceptor) {
-        this.authInterceptor = authInterceptor;
-    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

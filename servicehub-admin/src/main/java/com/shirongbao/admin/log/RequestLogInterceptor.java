@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.log;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
+@RequiredArgsConstructor
 public class RequestLogInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger("RequestLog");
     private static final String START_ATTR = RequestLogInterceptor.class.getName() + ".start";
@@ -30,16 +33,6 @@ public class RequestLogInterceptor implements HandlerInterceptor {
     private final AdminCredentialService adminCredentials;
     private final UserCredentialService userCredentials;
     private final SiteUserService siteUserService;
-
-    public RequestLogInterceptor(HttpRequestLogMapper logMapper,
-                                 AdminCredentialService adminCredentials,
-                                 UserCredentialService userCredentials,
-                                 SiteUserService siteUserService) {
-        this.logMapper = logMapper;
-        this.adminCredentials = adminCredentials;
-        this.userCredentials = userCredentials;
-        this.siteUserService = siteUserService;
-    }
 
     // 记录请求开始时间
     @Override

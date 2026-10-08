@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.entity.SiteNotification;
 import com.shirongbao.hirongbaohub.mapper.SiteNotificationMapper;
@@ -10,14 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class SiteNotificationService {
     private final SiteNotificationMapper mapper;
     private final SimpMessagingTemplate messagingTemplate;
-
-    public SiteNotificationService(SiteNotificationMapper mapper, SimpMessagingTemplate messagingTemplate) {
-        this.mapper = mapper;
-        this.messagingTemplate = messagingTemplate;
-    }
 
     public void notify(Long userId, String type, Long sourceId, String sourceAuthor, String content) {
         if (userId == null) return;

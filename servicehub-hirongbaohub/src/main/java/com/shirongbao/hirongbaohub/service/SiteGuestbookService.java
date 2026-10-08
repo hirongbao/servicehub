@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.hirongbaohub.entity.SiteGuestbook;
@@ -16,14 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class SiteGuestbookService {
     private final SiteGuestbookMapper guestbookMapper;
     private final SiteUserMapper userMapper;
-
-    public SiteGuestbookService(SiteGuestbookMapper guestbookMapper, SiteUserMapper userMapper) {
-        this.guestbookMapper = guestbookMapper;
-        this.userMapper = userMapper;
-    }
 
     public SiteGuestbook addMessage(String content, Long targetUserId) {
         Long userId = UserContext.getUserId();

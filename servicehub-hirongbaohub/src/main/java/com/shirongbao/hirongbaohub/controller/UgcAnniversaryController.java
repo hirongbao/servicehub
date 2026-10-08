@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteAnniversary;
@@ -11,13 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/anniversaries/ugc")
+@RequiredArgsConstructor
 public class UgcAnniversaryController {
 
     private final SiteAnniversaryService service;
-
-    public UgcAnniversaryController(SiteAnniversaryService service) {
-        this.service = service;
-    }
 
     @GetMapping("/list")
     public ApiResponse<List<SiteAnniversary>> list() {

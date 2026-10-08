@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.ReleaseLogUpsertRequest;
 import com.shirongbao.hirongbaohub.entity.SiteReleaseLog;
@@ -14,11 +16,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SiteReleaseLogService {
     private final SiteReleaseLogMapper mapper;
-
-    // 初始化更新日志服务
-    public SiteReleaseLogService(SiteReleaseLogMapper mapper) { this.mapper = mapper; }
 
     // 查询已发布更新日志
     public List<SiteReleaseLog> published() {

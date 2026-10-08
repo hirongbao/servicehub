@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shirongbao.hirongbaohub.dto.CommentCreateRequest;
 import com.shirongbao.hirongbaohub.entity.SiteComment;
@@ -19,19 +21,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class SiteCommentService {
     private final SiteCommentMapper mapper;
     private final SiteNotificationService noticeService;
     private final SitePostMapper postMapper;
     private final com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper;
-
-    // 初始化评论业务服务
-    public SiteCommentService(SiteCommentMapper mapper, SiteNotificationService noticeService, SitePostMapper postMapper, com.shirongbao.hirongbaohub.mapper.SiteUserMapper userMapper) {
-        this.mapper = mapper;
-        this.noticeService = noticeService;
-        this.postMapper = postMapper;
-        this.userMapper = userMapper;
-    }
 
     // 批量填充动态的评论列表（树形结构：顶级评论含 children 子回复）
     public void fillByPostIds(List<Long> postIds, Map<Long, List<SiteComment>> target) {

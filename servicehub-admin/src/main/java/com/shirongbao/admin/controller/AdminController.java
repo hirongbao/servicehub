@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shirongbao.admin.dto.AdminLoginRequest;
 import com.shirongbao.admin.security.AdminCredentialService;
@@ -23,14 +25,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class AdminController {
     private final AdminCredentialService credentials;
     private final SiteUserMapper siteUserMapper;
-
-    public AdminController(AdminCredentialService credentials, SiteUserMapper siteUserMapper) {
-        this.credentials = credentials;
-        this.siteUserMapper = siteUserMapper;
-    }
 
     @PostMapping("/login")
     public ApiResponse<Map<String, String>> login(@Valid @RequestBody AdminLoginRequest request) {

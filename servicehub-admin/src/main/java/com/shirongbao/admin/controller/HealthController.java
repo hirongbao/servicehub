@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -21,13 +23,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/health")
+@RequiredArgsConstructor
 public class HealthController {
     private final JdbcTemplate jdbc;
-
-    // 初始化健康检查接口
-    public HealthController(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     // 探测数据库连通性并返回服务健康状态
     @GetMapping

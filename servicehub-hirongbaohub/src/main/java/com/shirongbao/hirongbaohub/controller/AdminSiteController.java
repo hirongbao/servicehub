@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.dto.PostUpsertRequest;
 import com.shirongbao.hirongbaohub.dto.ProfileUpdateRequest;
@@ -31,21 +33,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/site")
+@RequiredArgsConstructor
 public class AdminSiteController {
     private final SitePostService postService;
     private final SiteProfileService profileService;
     private final SiteReleaseLogService releaseLogService;
     private final com.shirongbao.hirongbaohub.service.SiteCommentService commentService;
     private final com.shirongbao.hirongbaohub.mapper.SitePostMapper postMapper;
-
-    // 初始化站点内容管理接口
-    public AdminSiteController(SitePostService postService, SiteProfileService profileService, SiteReleaseLogService releaseLogService, com.shirongbao.hirongbaohub.service.SiteCommentService commentService, com.shirongbao.hirongbaohub.mapper.SitePostMapper postMapper) {
-        this.postService = postService;
-        this.profileService = profileService;
-        this.releaseLogService = releaseLogService;
-        this.commentService = commentService;
-        this.postMapper = postMapper;
-    }
 
     // 查询动态列表
     @GetMapping("/posts")

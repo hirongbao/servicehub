@@ -5,6 +5,8 @@
  */
 package com.shirongbao.linkhub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.authhub.entity.ServiceToken;
 import jakarta.servlet.http.HttpServletRequest;
 import com.shirongbao.authhub.service.ServiceTokenService;
@@ -31,16 +33,11 @@ import java.util.Map;
 @Tag(name = "LinkHub 开放接口", description = "供外部调用的短链生成与管理 API。支持通过 X-Service-Token 或 Bearer Token 鉴权。")
 @RestController
 @RequestMapping("/api/linkhub")
+@RequiredArgsConstructor
 public class PublicLinkController {
     private static final String HUB = "LINKHUB";
     private final ShortLinkService service;
     private final ServiceTokenService tokenService;
-
-    // 初始化开放短链接口
-    public PublicLinkController(ShortLinkService service, ServiceTokenService tokenService) {
-        this.service = service;
-        this.tokenService = tokenService;
-    }
 
     // 使用 LINKHUB Token 创建短链
     @Operation(summary = "创建短链", description = "将长链接转换为短链接。")

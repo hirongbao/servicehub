@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.security;
 
+import lombok.RequiredArgsConstructor;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.common.util.IpUtils;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Order(-100)
+@RequiredArgsConstructor
 public class IpRateLimitFilter extends OncePerRequestFilter {
     private static final int SECOND_LIMIT = 50;
     private static final int MINUTE_LIMIT = 1000;
@@ -33,12 +36,6 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private final ConcurrentHashMap<String, Counter> counters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Boolean> bannedIps = new ConcurrentHashMap<>();
-
-    // 初始化 IP 限流过滤器
-    public IpRateLimitFilter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = objectMapper;
-    }
 
     // 对每个请求执行永久封禁检查和双窗口频率限制
     @Override

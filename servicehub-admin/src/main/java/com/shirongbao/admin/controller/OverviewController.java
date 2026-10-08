@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.admin.dto.OverviewStats;
 import com.shirongbao.admin.dto.RecentToken;
 import com.shirongbao.authhub.entity.ServiceToken;
@@ -21,17 +23,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/overview")
+@RequiredArgsConstructor
 public class OverviewController {
     private final ServiceTokenService tokenService;
     private final ShortLinkService linkService;
     private final FileRecordService fileService;
-
-    // 初始化概览聚合服务
-    public OverviewController(ServiceTokenService tokenService, ShortLinkService linkService, FileRecordService fileService) {
-        this.tokenService = tokenService;
-        this.linkService = linkService;
-        this.fileService = fileService;
-    }
 
     // 查询概览聚合统计
     @GetMapping

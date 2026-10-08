@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -9,12 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@RequiredArgsConstructor
 public class SiteArticleService {
     private final SiteArticleMapper mapper;
-
-    public SiteArticleService(SiteArticleMapper mapper) {
-        this.mapper = mapper;
-    }
 
     public IPage<SiteArticle> page(int current, int size, String keyword) {
         QueryWrapper<SiteArticle> query = new QueryWrapper<SiteArticle>().orderByDesc("created_at");

@@ -5,6 +5,8 @@
  */
 package com.shirongbao.linkhub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shirongbao.common.response.ApiResponse;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,13 +29,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/links")
+@RequiredArgsConstructor
 public class AdminLinkController {
     private final ShortLinkService service;
-
-    // 初始化短链管理服务
-    public AdminLinkController(ShortLinkService service) {
-        this.service = service;
-    }
 
     // 分页并筛选查询短链列表（默认不查不可用的短链）
     @GetMapping

@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.common.response.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,13 +18,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/usage")
+@RequiredArgsConstructor
 public class UsageController {
     private final ServiceTokenService tokenService;
-
-    // 初始化调用记录接口
-    public UsageController(ServiceTokenService tokenService) {
-        this.tokenService = tokenService;
-    }
 
     // 分页查询 Token 调用记录，可按服务类型过滤
     @GetMapping

@@ -5,6 +5,8 @@
  */
 package com.shirongbao.filehub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.filehub.entity.FileRecord;
 import com.shirongbao.filehub.service.FileRecordService;
@@ -22,13 +24,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/files")
+@RequiredArgsConstructor
 public class FileHubController {
     private final FileRecordService service;
-
-    // 初始化文件管理服务
-    public FileHubController(FileRecordService service) {
-        this.service = service;
-    }
 
     // 查询文件列表
     @GetMapping

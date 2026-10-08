@@ -5,6 +5,8 @@
  */
 package com.shirongbao.authhub.service;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -28,16 +30,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ServiceTokenService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final ServiceTokenMapper mapper;
     private final TokenUsageLogMapper usageLogMapper;
-
-    // 初始化 Token 业务服务
-    public ServiceTokenService(ServiceTokenMapper mapper, TokenUsageLogMapper usageLogMapper) {
-        this.mapper = mapper;
-        this.usageLogMapper = usageLogMapper;
-    }
 
     // 分页查询服务 Token，并附带使用统计与过滤（默认不查不可用）
     public IPage<ServiceToken> page(int current, int size, String keyword, String tokenType, String statusFilter) {

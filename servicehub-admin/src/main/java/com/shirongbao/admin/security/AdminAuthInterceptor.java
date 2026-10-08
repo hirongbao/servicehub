@@ -5,6 +5,8 @@
  */
 package com.shirongbao.admin.security;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,15 +15,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
+@RequiredArgsConstructor
 public class AdminAuthInterceptor implements HandlerInterceptor {
     private final AdminCredentialService credentials;
     private final ObjectMapper objectMapper;
-
-    // 初始化凭证校验拦截器
-    public AdminAuthInterceptor(AdminCredentialService credentials, ObjectMapper objectMapper) {
-        this.credentials = credentials;
-        this.objectMapper = objectMapper;
-    }
 
     // 校验请求携带的登录凭证，通过时记录用户名，失败时返回 401 和统一响应
     @Override

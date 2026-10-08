@@ -5,6 +5,8 @@
  */
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.authhub.entity.ServiceToken;
 import com.shirongbao.authhub.service.ServiceTokenService;
 import com.shirongbao.common.response.ApiResponse;
@@ -39,17 +41,12 @@ import com.shirongbao.hirongbaohub.entity.SitePostMedia;
         + "2. \u8c03\u7528\u672c\u63a5\u53e3\u53d1\u5e03\u52a8\u6001\uff0c\u5c06\u56fe\u7247 URL \u586b\u5165 `mediaUrls` \u6570\u7ec4")
 @RestController
 @RequestMapping("/api/hirongbaohub")
+@RequiredArgsConstructor
 public class PublicHirongbaoHubController {
     private static final String HUB = "HIRONGBAOHUB";
     private final SitePostService postService;
     private final ServiceTokenService tokenService;
     private final SiteProfileService profileService;
-
-    public PublicHirongbaoHubController(SitePostService postService, ServiceTokenService tokenService, SiteProfileService profileService) {
-        this.postService = postService;
-        this.tokenService = tokenService;
-        this.profileService = profileService;
-    }
 
     @Operation(
             summary = "\u53d1\u5e03\u52a8\u6001",

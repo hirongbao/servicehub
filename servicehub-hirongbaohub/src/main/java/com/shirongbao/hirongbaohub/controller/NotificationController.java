@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteNotification;
 import com.shirongbao.hirongbaohub.security.UserContext;
@@ -10,9 +12,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/notifications")
+@RequiredArgsConstructor
 public class NotificationController {
     private final SiteNotificationService service;
-    public NotificationController(SiteNotificationService service) { this.service = service; }
     
     @GetMapping("/unread-count")
     public ApiResponse<Long> getUnreadCount() {

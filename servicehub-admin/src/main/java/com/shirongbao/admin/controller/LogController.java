@@ -15,17 +15,14 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/logs")
+@lombok.RequiredArgsConstructor
 public class LogController {
     
     private final HttpRequestLogMapper logMapper;
     
-    @Value("${logging.file.name:logs/servicehub.log}")
+    @Value("${logging.file.name:logs/servicehub-${server.port:8080}.log}")
     private String logFilePath;
 
-    public LogController(HttpRequestLogMapper logMapper, @Value("${server.port:8080}") int serverPort) {
-        this.logMapper = logMapper;
-        this.logFilePath = "logs/servicehub-" + serverPort + ".log";
-    }
 
     @GetMapping("/access")
     public ApiResponse<Map<String, Object>> getAccessLogs(
@@ -133,7 +130,7 @@ public class LogController {
             result.put("lines", Collections.emptyList());
             result.put("fileName", logFilePath);
             result.put("fileSize", 0);
-            result.put("message", "日志文件不存在");
+            result.put("message", "日志文件不存在")?);
             return ApiResponse.success(result);
         }
 

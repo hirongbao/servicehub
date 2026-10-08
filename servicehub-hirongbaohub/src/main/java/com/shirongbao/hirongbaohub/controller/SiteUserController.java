@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.dto.SendCodeRequest;
 import com.shirongbao.hirongbaohub.dto.UserLoginRequest;
@@ -14,13 +16,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
+@RequiredArgsConstructor
 public class SiteUserController {
 
     private final SiteUserService userService;
-
-    public SiteUserController(SiteUserService userService) {
-        this.userService = userService;
-    }
 
     @PostMapping("/send-code")
     public ApiResponse<Void> sendCode(@Valid @RequestBody SendCodeRequest request) {

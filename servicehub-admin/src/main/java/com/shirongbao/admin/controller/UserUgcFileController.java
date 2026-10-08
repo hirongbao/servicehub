@@ -1,5 +1,7 @@
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.filehub.entity.FileRecord;
 import com.shirongbao.filehub.service.FileRecordService;
@@ -13,15 +15,11 @@ import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/posts/ugc")
+@RequiredArgsConstructor
 public class UserUgcFileController {
 
     private final FileRecordService fileRecordService;
     private final StringRedisTemplate redisTemplate;
-
-    public UserUgcFileController(FileRecordService fileRecordService, StringRedisTemplate redisTemplate) {
-        this.fileRecordService = fileRecordService;
-        this.redisTemplate = redisTemplate;
-    }
 
     private void checkRateLimit() {
         String key1m = "rate_limit:upload:1m";

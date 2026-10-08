@@ -1,5 +1,7 @@
 package com.shirongbao.filehub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.shirongbao.authhub.entity.ServiceToken;
@@ -23,16 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "FileHub 开放接口", description = "供外部调用的媒体资产管理 API。支持通过 X-Service-Token 或 Bearer Token 鉴权。")
 @RestController
 @RequestMapping("/api/filehub")
+@RequiredArgsConstructor
 public class PublicFileHubController {
     private static final String HUB = "FILEHUB";
     private final FileRecordService service;
     private final ServiceTokenService tokenService;
-
-    // 初始化公开 FileHub 接口
-    public PublicFileHubController(FileRecordService service, ServiceTokenService tokenService) {
-        this.service = service;
-        this.tokenService = tokenService;
-    }
 
     // 使用 FileHub Token 上传图片
     @Operation(summary = "上传媒体文件", description = "支持上传单张图片或文件。支持格式：jpg/png/webp/gif 等。")

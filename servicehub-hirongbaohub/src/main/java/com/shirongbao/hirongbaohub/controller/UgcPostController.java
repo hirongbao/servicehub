@@ -1,5 +1,7 @@
 package com.shirongbao.hirongbaohub.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shirongbao.common.response.ApiResponse;
@@ -15,15 +17,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/posts/ugc")
+@RequiredArgsConstructor
 public class UgcPostController {
 
     private final SitePostService postService;
     private final SiteUserMapper userMapper;
-
-    public UgcPostController(SitePostService postService, SiteUserMapper userMapper) {
-        this.postService = postService;
-        this.userMapper = userMapper;
-    }
 
     @PostMapping("/add")
     public ApiResponse<SitePost> addPost(@RequestBody PostUpsertRequest request) {

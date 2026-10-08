@@ -1,5 +1,7 @@
 package com.shirongbao.admin.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.hirongbaohub.entity.SiteAnniversary;
 import com.shirongbao.hirongbaohub.service.SiteAnniversaryService;
@@ -10,15 +12,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/anniversaries")
+@RequiredArgsConstructor
 public class AdminAnniversaryController {
 
     private final SiteAnniversaryService service;
     private final SiteUserService siteUserService;
-
-    public AdminAnniversaryController(SiteAnniversaryService service, SiteUserService siteUserService) {
-        this.service = service;
-        this.siteUserService = siteUserService;
-    }
 
     @GetMapping
     public ApiResponse<List<SiteAnniversary>> list() {
