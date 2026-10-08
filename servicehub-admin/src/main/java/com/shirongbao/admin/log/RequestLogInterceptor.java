@@ -59,13 +59,13 @@ public class RequestLogInterceptor implements HandlerInterceptor {
         // 健康检查不持久化，避免无意义日志占用磁盘
         if (uri != null && !uri.equals("/api/health") && !uri.startsWith("/api/health/")) {
             recordAccessLog(clientIp, request.getMethod(), uri, query, response.getStatus(), costMs,
-                    request.getHeader("User-Agent"), request.getHeader("Referer"));
+                    request.getHeader("User-Agent"), request.getHeader("Referer"), userId);
         }
     }
 
     // 异步记录访问日志至数据库，静默捕获异常防止影响业务
     private void recordAccessLog(String ip, String method, String path, String query,
-                                int status, long costMs, String ua, String referer) {
+                                int status, long costMs, String ua, String referer, Long userId) {
         if (jdbcTemplate == null) return;
         asyncExecutor.execute(() -> {
             try {
