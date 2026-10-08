@@ -1,4 +1,4 @@
-package com.shirongbao.admin.controller;
+﻿package com.shirongbao.admin.controller;
 
 import com.shirongbao.common.response.ApiResponse;
 import com.shirongbao.admin.mapper.HttpRequestLogMapper;
@@ -130,7 +130,7 @@ public class LogController {
             result.put("lines", Collections.emptyList());
             result.put("fileName", logFilePath);
             result.put("fileSize", 0);
-            result.put("message", "日志文件不存在")?);
+            result.put("message", "日志文件不存在");
             return ApiResponse.success(result);
         }
 
@@ -153,7 +153,7 @@ public class LogController {
         } catch (IOException e) {
             result.put("lines", Collections.emptyList());
             result.put("fileName", logFilePath);
-            result.put("message", "读取日志文件失败: " + e.getMessage());
+            result.put("message", "日志文件不存在");
             return ApiResponse.success(result);
         }
     }
