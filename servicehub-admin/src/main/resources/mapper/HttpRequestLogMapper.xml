@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shirongbao.admin.mapper.HttpRequestLogMapper">
+
+    <insert id="insertLog">
+        INSERT INTO http_request_logs (client_ip, method, path, query_params, status_code, duration_ms, request_headers, user_id)
+        VALUES (#{clientIp}::inet, #{method}, #{path}, jsonb_build_object('raw', #{queryParams}::text), #{statusCode}, #{durationMs}, jsonb_build_object('User-Agent', #{userAgent}::text, 'Referer', #{referer}::text), #{userId})
+    </insert>
+
+    <sql id="logConditions">
+        <where>
+            <if test="ip != null and ip != ''"> AND text(client_ip) LIKE CONCAT('%', #{ip}, '%')</if>
+            <if test="method != null and method != ''"> AND method = #{method}</if>
+            <if test="path != null and path != ''"> AND path LIKE CONCAT('%', #{path}, '%')</if>
+            <if test="statusCode != null"> AND status_code = #{statusCode}</if>
+            <if test="statusMin != null"> AND status_code &gt;= #{statusMin}</if>
+            <if test="statusMax != null"> AND status_code &lt; #{statusMax}</if>
+            <if test="startTime != null and startTime != ''"> AND created_at &gt;= #{startTime}::timestamptz</if>
+            <if test="endTime != null and endTime != ''"> AND created_at &lt;= #{endTime}::timestamptz</if>
+            <if test="minCostMs != null"> AND duration_ms &gt;= #{minCostMs}</if>
+        </where>
+    </sql>
+
+    <select id="countLogs" resultType="long">
+        SELECT COUNT(*) FROM http_request_logs
+        <include refid="logConditions"/>
+    </select>
+
+    <select id="selectLogs" resultType="map">
+        SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
+               duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
+               user_id, created_at 
+        FROM http_request_logs
+        <include refid="logConditions"/>
+        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="getSummary" resultType="map">
+        SELECT COUNT(*) AS total_requests,
+               ROUND(AVG(duration_ms), 1) AS avg_cost_ms,
+               SUM(CASE WHEN status_code &gt;= 400 THEN 1 ELSE 0 END) AS error_count,
+               COUNT(DISTINCT client_ip) AS unique_ips
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+    </select>
+
+    <select id="getHourlyTrend" resultType="map">
+        SELECT to_char(created_at, 'YYYY-MM-DD HH24:00') AS hour, COUNT(*) AS count
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        GROUP BY hour ORDER BY hour
+    </select>
+
+    <select id="getStatusDistribution" resultType="map">
+        SELECT CASE 
+                 WHEN status_code &gt;= 200 AND status_code &lt; 300 THEN '2xx' 
+                 WHEN status_code &gt;= 300 AND status_code &lt; 400 THEN '3xx' 
+                 WHEN status_code &gt;= 400 AND status_code &lt; 500 THEN '4xx' 
+                 WHEN status_code &gt;= 500 THEN '5xx' ELSE 'other' END AS status_group, 
+               COUNT(*) AS count 
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        GROUP BY status_group ORDER BY status_group
+    </select>
+
+    <select id="getTopPaths" resultType="map">
+        SELECT path, COUNT(*) AS count, ROUND(AVG(duration_ms), 1) AS avg_ms 
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
+        GROUP BY path ORDER BY count DESC LIMIT 10
+    </select>
+
+    <select id="getTopIps" resultType="map">
+        SELECT text(client_ip) AS ip_address, COUNT(*) AS count, MAX(created_at) AS last_seen 
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
+        GROUP BY client_ip ORDER BY count DESC LIMIT 10
+    </select>
+
+    <select id="getLatencyDistribution" resultType="map">
+        SELECT CASE 
+                 WHEN duration_ms &lt; 50 THEN '&lt;50ms' 
+                 WHEN duration_ms &lt; 200 THEN '50-200ms' 
+                 WHEN duration_ms &lt; 500 THEN '200-500ms' 
+                 WHEN duration_ms &lt; 1000 THEN '500ms-1s' 
+                 ELSE '&gt;1s' END AS bracket, 
+               COUNT(*) AS count 
+        FROM http_request_logs 
+        WHERE created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval 
+        GROUP BY bracket ORDER BY array_position(ARRAY['&lt;50ms', '50-200ms', '200-500ms', '500ms-1s', '&gt;1s']::text[], bracket)
+    </select>
+
+    <!-- IP specific endpoints -->
+    <select id="getIpSummary" resultType="map">
+        SELECT COUNT(*) AS total_requests,
+               SUM(CASE WHEN status_code &gt;= 200 AND status_code &lt; 400 THEN 1 ELSE 0 END) AS success_count,
+               SUM(CASE WHEN status_code &gt;= 400 AND status_code &lt; 500 THEN 1 ELSE 0 END) AS error_4xx,
+               SUM(CASE WHEN status_code &gt;= 500 THEN 1 ELSE 0 END) AS error_5xx,
+               ROUND(AVG(duration_ms), 1) AS avg_cost_ms,
+               MAX(duration_ms) AS max_cost_ms,
+               COUNT(DISTINCT path) AS unique_paths,
+               MIN(created_at) AS first_seen,
+               MAX(created_at) AS last_seen
+        FROM http_request_logs 
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+    </select>
+
+    <select id="getIpStatusDistribution" resultType="map">
+        SELECT CASE 
+                 WHEN status_code &gt;= 200 AND status_code &lt; 300 THEN '2xx' 
+                 WHEN status_code &gt;= 300 AND status_code &lt; 400 THEN '3xx' 
+                 WHEN status_code &gt;= 400 AND status_code &lt; 500 THEN '4xx' 
+                 WHEN status_code &gt;= 500 THEN '5xx' ELSE 'other' END AS status_group, 
+               COUNT(*) AS count 
+        FROM http_request_logs 
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        GROUP BY status_group ORDER BY status_group
+    </select>
+
+    <select id="getIpTopPaths" resultType="map">
+        SELECT path, COUNT(*) AS count, ROUND(AVG(duration_ms), 1) AS avg_ms,
+               SUM(CASE WHEN status_code &gt;= 400 THEN 1 ELSE 0 END) AS error_count
+        FROM http_request_logs 
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        GROUP BY path ORDER BY count DESC LIMIT 20
+    </select>
+
+    <select id="getIpTimeDistribution" resultType="map">
+        SELECT ${timeBucketExpr} AS time_bucket, COUNT(*) AS count 
+        FROM http_request_logs 
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        GROUP BY time_bucket ORDER BY time_bucket
+    </select>
+
+    <sql id="ipLogConditions">
+        WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (CAST(#{intervalHours} AS TEXT) || ' HOUR')::interval
+        <if test="method != null and method != ''"> AND method = #{method}</if>
+        <if test="path != null and path != ''"> AND path LIKE CONCAT('%', #{path}, '%')</if>
+        <if test="statusGroup == '2xx'"> AND status_code &gt;= 200 AND status_code &lt; 300</if>
+        <if test="statusGroup == '3xx'"> AND status_code &gt;= 300 AND status_code &lt; 400</if>
+        <if test="statusGroup == '4xx'"> AND status_code &gt;= 400 AND status_code &lt; 500</if>
+        <if test="statusGroup == '5xx'"> AND status_code &gt;= 500</if>
+    </sql>
+
+    <select id="countIpLogs" resultType="long">
+        SELECT COUNT(*) FROM http_request_logs
+        <include refid="ipLogConditions"/>
+    </select>
+
+    <select id="selectIpLogs" resultType="map">
+        SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
+               duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
+               user_id, created_at 
+        FROM http_request_logs
+        <include refid="ipLogConditions"/>
+        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+</mapper>

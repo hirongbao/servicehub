@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.shirongbao.admin.mapper.HttpRequestLogMapper;
 import com.shirongbao.admin.security.AdminCredentialService;
 import com.shirongbao.hirongbaohub.security.UserCredentialService;
 import com.shirongbao.hirongbaohub.service.SiteUserService;
@@ -25,17 +25,17 @@ import java.util.concurrent.Executors;
 public class RequestLogInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger("RequestLog");
     private static final String START_ATTR = RequestLogInterceptor.class.getName() + ".start";
-    private final JdbcTemplate jdbcTemplate;
+    private final HttpRequestLogMapper logMapper;
     private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final AdminCredentialService adminCredentials;
     private final UserCredentialService userCredentials;
     private final SiteUserService siteUserService;
 
-    public RequestLogInterceptor(JdbcTemplate jdbcTemplate,
+    public RequestLogInterceptor(HttpRequestLogMapper logMapper,
                                  AdminCredentialService adminCredentials,
                                  UserCredentialService userCredentials,
                                  SiteUserService siteUserService) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.logMapper = logMapper;
         this.adminCredentials = adminCredentials;
         this.userCredentials = userCredentials;
         this.siteUserService = siteUserService;
@@ -101,18 +101,14 @@ public class RequestLogInterceptor implements HandlerInterceptor {
     // 异步记录访问日志至数据库，静默捕获异常防止影响业务
     private void recordAccessLog(String ip, String method, String path, String query,
                                 int status, long costMs, String ua, String referer, Long userId) {
-        if (jdbcTemplate == null) return;
+        if (logMapper == null) return;
         asyncExecutor.execute(() -> {
             try {
                 String safePath = path != null && path.length() > 512 ? path.substring(0, 512) : path;
                 String safeQuery = query != null && query.length() > 1024 ? query.substring(0, 1024) : query;
                 String safeUa = ua != null && ua.length() > 512 ? ua.substring(0, 512) : ua;
                 String safeRef = referer != null && referer.length() > 512 ? referer.substring(0, 512) : referer;
-                jdbcTemplate.update(
-                        "INSERT INTO http_request_logs (client_ip, method, path, query_params, status_code, duration_ms, request_headers, user_id) " +
-                        "VALUES (?::inet, ?, ?, jsonb_build_object('raw', ?::text), ?, ?, jsonb_build_object('User-Agent', ?::text, 'Referer', ?::text), ?)",
-                        ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId
-                );
+                logMapper.insertLog(ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId);
             } catch (Exception ignored) {
                 // 数据库迁移尚未完成或连接断开时不阻塞请求
             }
