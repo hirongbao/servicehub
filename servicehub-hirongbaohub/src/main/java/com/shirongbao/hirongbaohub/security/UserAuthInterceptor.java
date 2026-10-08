@@ -29,6 +29,7 @@ public class UserAuthInterceptor implements HandlerInterceptor {
             UserCredentialService.Parsed parsed = credentials.verifyAndParse(token);
             if (parsed != null) {
                 UserContext.set(parsed);
+                request.setAttribute("auth.userId", parsed.userId());
                 return true;
             }
         }

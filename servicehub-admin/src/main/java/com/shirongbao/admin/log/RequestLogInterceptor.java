@@ -45,6 +45,11 @@ public class RequestLogInterceptor implements HandlerInterceptor {
         String query = request.getQueryString();
         String fullPath = query != null ? uri + "?" + query : uri;
         String clientIp = IpUtils.getClientIp(request);
+        Long userId = null;
+        Object userIdObj = request.getAttribute("auth.userId");
+        if (userIdObj instanceof Long) {
+            userId = (Long) userIdObj;
+        }
 
         log.info("{} {} {} {}ms ip={} user={} token={}",
                 request.getMethod(), fullPath, response.getStatus(), costMs, clientIp,
@@ -69,8 +74,8 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 String safeUa = ua != null && ua.length() > 512 ? ua.substring(0, 512) : ua;
                 String safeRef = referer != null && referer.length() > 512 ? referer.substring(0, 512) : referer;
                 jdbcTemplate.update(
-                        "INSERT INTO access_log (ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef
+                        "INSERT INTO access_log (ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId
                 );
             } catch (Exception ignored) {
                 // 数据库迁移尚未完成或连接断开时不阻塞请求

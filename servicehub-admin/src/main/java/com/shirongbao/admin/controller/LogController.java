@@ -98,7 +98,7 @@ public class LogController {
         String countSql = "SELECT COUNT(*) FROM access_log " + where;
         Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
 
-        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, created_at FROM access_log "
+        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id, created_at FROM access_log "
                 + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
         List<Object> dataParams = new ArrayList<>(params);
         dataParams.add(size);
@@ -296,7 +296,7 @@ public class LogController {
         String countSql = "SELECT COUNT(*) FROM access_log " + where;
         Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
 
-        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, created_at FROM access_log "
+        String dataSql = "SELECT id, ip_address, method, path, query_string, status_code, cost_ms, user_agent, referer, user_id, created_at FROM access_log "
                 + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
         List<Object> dataParams = new ArrayList<>(params);
         dataParams.add(size);
