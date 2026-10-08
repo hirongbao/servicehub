@@ -155,7 +155,7 @@ public class SiteUserService {
     public java.util.List<java.util.Map<String, Object>> getPublicUsers() {
         return mapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteUser>()
                 .eq(SiteUser::getStatus, 1)
-                .orderByDesc(SiteUser::getCreatedAt))
+                .orderByAsc(SiteUser::getCreatedAt))
                 .stream()
                 .map(u -> {
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
