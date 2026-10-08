@@ -151,6 +151,23 @@ public class SiteUserService {
         );
     }
 
+    
+    public java.util.List<java.util.Map<String, Object>> getPublicUsers() {
+        return mapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SiteUser>()
+                .eq(SiteUser::getStatus, 1)
+                .orderByDesc(SiteUser::getCreatedAt))
+                .stream()
+                .map(u -> {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", u.getId());
+                    map.put("accountName", u.getAccountName());
+                    map.put("nickname", u.getNickname());
+                    map.put("avatarUrl", u.getAvatarUrl());
+                    map.put("bio", u.getBio());
+                    return map;
+                }).collect(java.util.stream.Collectors.toList());
+    }
+
     public SiteUser getUserInfo(Long userId) {
         SiteUser user = mapper.selectById(userId);
         if (user != null) {

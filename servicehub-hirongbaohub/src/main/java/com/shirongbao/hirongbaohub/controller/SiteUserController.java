@@ -39,6 +39,11 @@ public class SiteUserController {
         return ApiResponse.success(userService.login(request));
     }
 
+
+    @GetMapping("/public/list")
+    public ApiResponse<java.util.List<java.util.Map<String, Object>>> getPublicUsers() {
+        return ApiResponse.success(userService.getPublicUsers());
+    }
     @GetMapping("/info")
     public ApiResponse<SiteUser> getInfo() {
         Long userId = UserContext.getUserId();
