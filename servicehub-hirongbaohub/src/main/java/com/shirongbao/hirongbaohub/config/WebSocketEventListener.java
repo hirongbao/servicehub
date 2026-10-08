@@ -18,7 +18,7 @@ public class WebSocketEventListener {
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         int current = onlineCount.incrementAndGet();
-        messagingTemplate.convertAndSend("/topic/online-count", current + 12);
+        messagingTemplate.convertAndSend("/topic/online-count", current);
     }
 
     @EventListener
@@ -28,6 +28,6 @@ public class WebSocketEventListener {
             onlineCount.set(0);
             current = 0;
         }
-        messagingTemplate.convertAndSend("/topic/online-count", current + 12);
+        messagingTemplate.convertAndSend("/topic/online-count", current);
     }
 }
