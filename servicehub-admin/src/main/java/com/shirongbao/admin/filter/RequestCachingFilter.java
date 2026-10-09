@@ -1,3 +1,8 @@
+/*
+ * auth: hirongbao
+ * create: 2026-10-09
+ * desc: HTTP 请求与响应体缓存过滤器，支持安全提取 Body 用于日志审计且防止 OOM
+ */
 package com.shirongbao.admin.filter;
 
 import jakarta.servlet.*;
@@ -15,6 +20,7 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestCachingFilter implements Filter {
 
+    // 过滤并包装 HTTP 请求与响应以支持读取流内容
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {

@@ -1,3 +1,8 @@
+/*
+ * auth: hirongbao
+ * create: 2026-09-03
+ * desc: 用户 UGC 文件上传控制器
+ */
 package com.shirongbao.admin.controller;
 
 import lombok.RequiredArgsConstructor;

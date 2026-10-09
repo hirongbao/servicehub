@@ -1,3 +1,8 @@
+/*
+ * auth: hirongbao
+ * create: 2026-09-05
+ * desc: 管理员纪念日管理控制器
+ */
 package com.shirongbao.admin.controller;
 
 import lombok.RequiredArgsConstructor;
