@@ -1,3 +1,8 @@
+/*
+ * auth: hirongbao
+ * create: 2026-10-07
+ * desc: 普通用户登录凭证签发与校验（HMAC-SHA256 无状态凭证）
+ */
 package com.shirongbao.hirongbaohub.security;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +23,7 @@ public class UserCredentialService {
     private static final long TTL_MILLIS = Duration.ofDays(30).toMillis();
     private final byte[] secret;
 
+    // 初始化用户签名密钥，优先使用配置或共享密钥，未配置时自动持久化到本地文件
     public UserCredentialService(@Value("${servicehub.jwt.secret:}") String configuredSecret) {
         if (configuredSecret != null && !configuredSecret.isBlank()) {
             this.secret = configuredSecret.getBytes(StandardCharsets.UTF_8);
@@ -39,6 +45,7 @@ public class UserCredentialService {
         }
     }
 
+    // 签发用户登录凭证
     public String issue(Long userId, String role) {
         long expiresAt = System.currentTimeMillis() + TTL_MILLIS;
         String payload = userId + ":" + role + ":" + expiresAt;
@@ -46,6 +53,7 @@ public class UserCredentialService {
         return encoded + "." + sign(payload);
     }
 
+    // 校验并解析用户登录凭证
     public Parsed verifyAndParse(String credential) {
         if (credential == null || credential.isBlank()) return null;
         int dot = credential.lastIndexOf('.');
@@ -75,6 +83,7 @@ public class UserCredentialService {
         return new Parsed(Long.parseLong(parts[0]), parts[1], expiresAt);
     }
 
+    // 计算凭证签名
     private String sign(String payload) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -85,6 +94,7 @@ public class UserCredentialService {
         }
     }
 
+    // 生成随机密钥
     private static String randomSecret() {
         byte[] bytes = new byte[32];
         new SecureRandom().nextBytes(bytes);

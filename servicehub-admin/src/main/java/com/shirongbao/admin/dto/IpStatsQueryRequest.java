@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class IpStatsQueryRequest {
     private String ip;
+    @Builder.Default
     private String range = LogConstants.RANGE_24H;
 
     // 获取统计时间跨度小时数

@@ -17,8 +17,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class IpAccessLogQueryRequest {
     private String ip;
+    @Builder.Default
     private Integer page = LogConstants.DEFAULT_PAGE;
+    @Builder.Default
     private Integer size = LogConstants.DEFAULT_PAGE_SIZE;
+    @Builder.Default
     private String range = LogConstants.RANGE_24H;
     private String method;
     private String path;

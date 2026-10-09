@@ -80,6 +80,8 @@ servicehub:
     username: ${SERVICEHUB_ADMIN_USERNAME:hirongbao}
     password: ${SERVICEHUB_ADMIN_PASSWORD:}
     secret: ${SERVICEHUB_AUTH_SECRET:}
+  jwt:
+    secret: ${SERVICEHUB_JWT_SECRET:${SERVICEHUB_AUTH_SECRET:}}
   cos:
     secret-id: ${COS_SECRET_ID:}
     secret-key: ${COS_SECRET_KEY:}

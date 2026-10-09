@@ -12,6 +12,7 @@ import com.shirongbao.admin.security.AdminCredentialService;
 import com.shirongbao.admin.service.HttpRequestLogService;
 import com.shirongbao.common.constant.LogConstants;
 import com.shirongbao.common.util.IpUtils;
+import com.shirongbao.hirongbaohub.security.UserContext;
 import com.shirongbao.hirongbaohub.security.UserCredentialService;
 import com.shirongbao.hirongbaohub.service.SiteUserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,38 +53,12 @@ public class RequestLogInterceptor implements HandlerInterceptor {
         String query = request.getQueryString();
         String fullPath = query != null ? uri + "?" + query : uri;
         String clientIp = IpUtils.getClientIp(request);
-        Long userId = null;
-        Object userIdObj = request.getAttribute("auth.userId");
-        if (userIdObj instanceof Long) {
-            userId = (Long) userIdObj;
-        } else {
-            String credential = request.getHeader(LogConstants.HEADER_AUTHORIZATION);
-            if (credential != null && credential.startsWith(LogConstants.BEARER_PREFIX)) {
-                credential = credential.substring(LogConstants.BEARER_PREFIX.length()).trim();
-            } else {
-                String legacy = request.getHeader(LogConstants.HEADER_SA_TOKEN);
-                credential = legacy == null ? credential : legacy.trim();
-            }
-            if (credential != null && !credential.isEmpty()) {
-                try {
-                    String adminUser = adminCredentials.resolveUsername(credential);
-                    if (adminUser != null) {
-                        userId = siteUserService.getAdminUserId();
-                    } else {
-                        UserCredentialService.Parsed parsed = userCredentials.verifyAndParse(credential);
-                        if (parsed != null) {
-                            userId = parsed.userId();
-                        }
-                    }
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-        }
+        Long userId = resolveUserId(request);
 
-        log.info("{} {} {} {}ms ip={} user={} token={}",
+        log.info("{} {} {} {}ms ip={} user={} uid={} token={}",
                 request.getMethod(), fullPath, response.getStatus(), costMs, clientIp,
                 Objects.toString(request.getAttribute("auth.user"), "-"),
+                userId != null ? userId : "-",
                 Objects.toString(request.getAttribute("auth.tokenName"), "-"));
 
         // 健康检查不持久化，避免无意义日志占用磁盘
@@ -140,5 +115,78 @@ public class RequestLogInterceptor implements HandlerInterceptor {
 
             logService.recordAsync(logRecord);
         }
+    }
+
+    // 解析当前请求的用户 ID，优先使用请求属性或上下文，兜底提取凭证并解析
+    private Long resolveUserId(HttpServletRequest request) {
+        Object userIdObj = request.getAttribute("auth.userId");
+        if (userIdObj instanceof Long id) {
+            return id;
+        }
+        if (userIdObj instanceof Number num) {
+            return num.longValue();
+        }
+        Long ctxUserId = UserContext.getUserId();
+        if (ctxUserId != null) {
+            return ctxUserId;
+        }
+        String credential = resolveCredential(request);
+        if (credential == null || credential.isBlank()) {
+            return null;
+        }
+        try {
+            UserCredentialService.Parsed parsed = userCredentials.verifyAndParse(credential);
+            if (parsed != null) {
+                return parsed.userId();
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            String adminUser = adminCredentials.resolveUsername(credential);
+            if (adminUser != null) {
+                return siteUserService.getAdminUserId();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    // 从请求头、查询参数或 Cookie 中解析用户或管理员凭证
+    private String resolveCredential(HttpServletRequest request) {
+        String authHeader = request.getHeader(LogConstants.HEADER_AUTHORIZATION);
+        if (authHeader != null && !authHeader.isBlank()) {
+            if (authHeader.startsWith(LogConstants.BEARER_PREFIX)) {
+                return authHeader.substring(LogConstants.BEARER_PREFIX.length()).trim();
+            }
+            return authHeader.trim();
+        }
+        String saToken = request.getHeader(LogConstants.HEADER_SA_TOKEN);
+        if (saToken != null && !saToken.isBlank()) {
+            return saToken.trim();
+        }
+        String tokenHeader = request.getHeader("token");
+        if (tokenHeader != null && !tokenHeader.isBlank()) {
+            return tokenHeader.trim();
+        }
+        String xTokenHeader = request.getHeader("X-Token");
+        if (xTokenHeader != null && !xTokenHeader.isBlank()) {
+            return xTokenHeader.trim();
+        }
+        String queryToken = request.getParameter("token");
+        if (queryToken != null && !queryToken.isBlank()) {
+            return queryToken.trim();
+        }
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                String name = cookie.getName();
+                if ("site_token".equals(name) || "token".equals(name) || "servicehub_token".equals(name)) {
+                    if (cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                        return cookie.getValue().trim();
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
