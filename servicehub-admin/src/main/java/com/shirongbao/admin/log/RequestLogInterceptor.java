@@ -61,8 +61,15 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 userId != null ? userId : "-",
                 Objects.toString(request.getAttribute("auth.tokenName"), "-"));
 
-        // 健康检查不持久化，避免无意义日志占用磁盘
-        if (uri != null && !uri.equals(LogConstants.HEALTH_CHECK_PATH) && !uri.startsWith(LogConstants.HEALTH_CHECK_PATH + "/")) {
+        // 健康检查和心跳等内部探活请求不持久化，避免无意义日志占用磁盘并干扰业务审计
+        boolean isInternalPath = uri == null
+                || uri.equals(LogConstants.HEALTH_CHECK_PATH)
+                || uri.startsWith(LogConstants.HEALTH_CHECK_PATH + "/")
+                || uri.equals("/api/heartbeat")
+                || uri.equals("/api/hirongbaohub/heartbeat")
+                || uri.startsWith("/api/heartbeat/")
+                || uri.startsWith("/api/hirongbaohub/heartbeat/");
+        if (!isInternalPath) {
             String reqBody = null;
             if (request instanceof ContentCachingRequestWrapper wrapper) {
                 byte[] buf = wrapper.getContentAsByteArray();
