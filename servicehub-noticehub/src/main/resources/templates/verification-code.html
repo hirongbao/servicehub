@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 40px 0; background-color: #f4f4f5;">
+        <tr>
+            <td align="center">
+                <table width="500" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; margin: 0 20px;">
+                    <tr>
+                        <td style="padding: 30px 40px; border-bottom: 1px solid #f4f4f5;">
+                            <div style="font-size: 16px; font-weight: 700; color: #18181b; letter-spacing: -0.5px;">NoticeHub <span style="color: #a1a1aa; font-weight: 400;">/ 验证中心</span></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #18181b; font-weight: 600;">身份验证申请</h2>
+                            <p style="margin: 0 0 30px 0; font-size: 14px; color: #52525b; line-height: 1.6;">
+                                您正在执行一项敏感操作，需要验证您的电子邮件地址。该请求的调用方信息如下：
+                            </p>
+                            <div style="background-color: #fafafa; border-radius: 8px; padding: 16px; margin-bottom: 30px; border: 1px solid #f4f4f5;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="80" style="font-size: 13px; color: #a1a1aa;">业务来源</td>
+                                        <td style="font-size: 14px; font-weight: 600; color: #18181b;"><a href="https://${siteName}.com" style="color: #18181b; text-decoration: none; border-bottom: 1px dashed #a1a1aa; padding-bottom: 2px;" target="_blank">${siteName}.com</a></td>
+                                    </tr>
+                                    <tr><td colspan="2" style="height: 12px;"></td></tr>
+                                    <tr>
+                                        <td style="font-size: 13px; color: #a1a1aa;">平台环境</td>
+                                        <td style="font-size: 14px; font-weight: 500; color: #52525b;"><a href="https://${siteName}.com" style="color: #52525b; text-decoration: none;" target="_blank">${siteName} 官方网站</a></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <p style="margin: 0 0 12px 0; font-size: 13px; color: #71717a;">验证码 (15 分钟内有效):</p>
+                            <div style="background-color: #18181b; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 30px;">
+                                <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 36px; font-weight: 700; color: #ffffff; letter-spacing: 16px; margin-left: 16px;">${code}</span>
+                            </div>
+                            <p style="margin: 0; font-size: 12px; color: #a1a1aa; line-height: 1.5;">
+                                如果您未在 ${siteName} 发起过此请求，请直接忽略此邮件，您的账号环境目前依然安全。
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f4f4f5;">
+                            <p style="margin: 0; font-size: 12px; color: #a1a1aa;">
+                                本验证邮件由基础通知服务 <strong style="color: #71717a;">NoticeHub</strong> 自动投递。<br>请勿直接回复此邮件。
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
