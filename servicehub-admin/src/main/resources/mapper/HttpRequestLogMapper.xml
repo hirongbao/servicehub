@@ -9,15 +9,15 @@
 
     <sql id="logConditions">
         <where>
-            <if test="ip != null and ip != ''"> AND text(client_ip) LIKE CONCAT('%', #{ip}, '%')</if>
-            <if test="method != null and method != ''"> AND method = #{method}</if>
-            <if test="path != null and path != ''"> AND path LIKE CONCAT('%', #{path}, '%')</if>
+            <if test="cleanIp != null and cleanIp != ''"> AND text(client_ip) LIKE CONCAT('%', #{cleanIp}, '%')</if>
+            <if test="cleanMethod != null and cleanMethod != ''"> AND method = #{cleanMethod}</if>
+            <if test="cleanPath != null and cleanPath != ''"> AND path LIKE CONCAT('%', #{cleanPath}, '%')</if>
             <if test="statusCode != null"> AND status_code = #{statusCode}</if>
-            <if test="statusMin != null"> AND status_code &gt;= #{statusMin}</if>
-            <if test="statusMax != null"> AND status_code &lt; #{statusMax}</if>
+            <if test="effectiveStatusMin != null"> AND status_code &gt;= #{effectiveStatusMin}</if>
+            <if test="effectiveStatusMax != null"> AND status_code &lt; #{effectiveStatusMax}</if>
             <if test="startTime != null and startTime != ''"> AND created_at &gt;= #{startTime}::timestamptz</if>
             <if test="endTime != null and endTime != ''"> AND created_at &lt;= #{endTime}::timestamptz</if>
-            <if test="minCostMs != null"> AND duration_ms &gt;= #{minCostMs}</if>
+            <if test="effectiveMinCostMs != null"> AND duration_ms &gt;= #{effectiveMinCostMs}</if>
         </where>
     </sql>
 
@@ -32,7 +32,7 @@
                user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs
         <include refid="logConditions"/>
-        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="getSummary" resultType="map">
@@ -134,12 +134,12 @@
 
     <sql id="ipLogConditions">
         WHERE client_ip = #{ip}::inet AND created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR')
-        <if test="method != null and method != ''"> AND method = #{method}</if>
-        <if test="path != null and path != ''"> AND path LIKE CONCAT('%', #{path}, '%')</if>
-        <if test="statusGroup == '2xx'"> AND status_code &gt;= 200 AND status_code &lt; 300</if>
-        <if test="statusGroup == '3xx'"> AND status_code &gt;= 300 AND status_code &lt; 400</if>
-        <if test="statusGroup == '4xx'"> AND status_code &gt;= 400 AND status_code &lt; 500</if>
-        <if test="statusGroup == '5xx'"> AND status_code &gt;= 500</if>
+        <if test="cleanMethod != null and cleanMethod != ''"> AND method = #{cleanMethod}</if>
+        <if test="cleanPath != null and cleanPath != ''"> AND path LIKE CONCAT('%', #{cleanPath}, '%')</if>
+        <if test="cleanStatusGroup == '2xx'"> AND status_code &gt;= 200 AND status_code &lt; 300</if>
+        <if test="cleanStatusGroup == '3xx'"> AND status_code &gt;= 300 AND status_code &lt; 400</if>
+        <if test="cleanStatusGroup == '4xx'"> AND status_code &gt;= 400 AND status_code &lt; 500</if>
+        <if test="cleanStatusGroup == '5xx'"> AND status_code &gt;= 500</if>
     </sql>
 
     <select id="countIpLogs" resultType="long">
@@ -153,16 +153,6 @@
                user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs
         <include refid="ipLogConditions"/>
-        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>
-
-
-
-
-
-
-
-
-
-

@@ -7,33 +7,30 @@ package com.shirongbao.admin.log;
 
 import lombok.RequiredArgsConstructor;
 
+import com.shirongbao.admin.entity.HttpRequestLog;
+import com.shirongbao.admin.security.AdminCredentialService;
+import com.shirongbao.admin.service.HttpRequestLogService;
 import com.shirongbao.common.util.IpUtils;
+import com.shirongbao.hirongbaohub.security.UserCredentialService;
+import com.shirongbao.hirongbaohub.service.SiteUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.shirongbao.admin.mapper.HttpRequestLogMapper;
-import com.shirongbao.admin.security.AdminCredentialService;
-import com.shirongbao.hirongbaohub.security.UserCredentialService;
-import com.shirongbao.hirongbaohub.service.SiteUserService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
+
 import java.nio.charset.StandardCharsets;
-
-
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Component
 @RequiredArgsConstructor
 public class RequestLogInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger("RequestLog");
     private static final String START_ATTR = RequestLogInterceptor.class.getName() + ".start";
-    private final HttpRequestLogMapper logMapper;
-    private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final HttpRequestLogService logService;
     private final AdminCredentialService adminCredentials;
     private final UserCredentialService userCredentials;
     private final SiteUserService siteUserService;
@@ -119,24 +116,22 @@ public class RequestLogInterceptor implements HandlerInterceptor {
             }
             if (errorMsg != null && errorMsg.length() > 2000) errorMsg = errorMsg.substring(0, 2000);
 
-            recordAccessLog(clientIp, request.getMethod(), uri, query, response.getStatus(), costMs,
-                    request.getHeader("User-Agent"), request.getHeader("Referer"), userId, reqBody, respBody, errorMsg);
-        }
-    }
+            HttpRequestLog logRecord = HttpRequestLog.builder()
+                    .clientIp(clientIp)
+                    .method(request.getMethod())
+                    .path(uri)
+                    .queryParams(query)
+                    .statusCode(response.getStatus())
+                    .durationMs(costMs)
+                    .userAgent(request.getHeader("User-Agent"))
+                    .referer(request.getHeader("Referer"))
+                    .userId(userId)
+                    .requestBody(reqBody)
+                    .responseBody(respBody)
+                    .errorMessage(errorMsg)
+                    .build();
 
-    // 异步记录访问日志至数据库，静默捕获异常防止影响业务
-    private void recordAccessLog(String ip, String method, String path, String query,
-                                int status, long costMs, String ua, String referer, Long userId, String requestBody, String responseBody, String errorMessage) {
-        if (logMapper == null) return;
-        asyncExecutor.execute(() -> {
-            try {
-                String safePath = path != null && path.length() > 512 ? path.substring(0, 512) : path;
-                String safeQuery = query != null && query.length() > 1024 ? query.substring(0, 1024) : query;
-                String safeUa = ua != null && ua.length() > 512 ? ua.substring(0, 512) : ua;
-                String safeRef = referer != null && referer.length() > 512 ? referer.substring(0, 512) : referer;
-                logMapper.insertLog(ip, method, safePath, safeQuery, status, costMs, safeUa, safeRef, userId, requestBody, responseBody, errorMessage);
-            } catch (Exception ignored) {
-            }
-        });
+            logService.recordAsync(logRecord);
+        }
     }
 }

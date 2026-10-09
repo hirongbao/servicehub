@@ -5,10 +5,17 @@
  */
 package com.shirongbao.admin.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class IpStatsQueryRequest {
+    private String ip;
     private String range = "24h";
 
     // 获取统计时间跨度小时数
