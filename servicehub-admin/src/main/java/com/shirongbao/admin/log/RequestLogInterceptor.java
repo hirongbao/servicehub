@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import com.shirongbao.admin.entity.HttpRequestLog;
 import com.shirongbao.admin.security.AdminCredentialService;
 import com.shirongbao.admin.service.HttpRequestLogService;
+import com.shirongbao.common.constant.LogConstants;
 import com.shirongbao.common.util.IpUtils;
 import com.shirongbao.hirongbaohub.security.UserCredentialService;
 import com.shirongbao.hirongbaohub.service.SiteUserService;
@@ -56,11 +57,11 @@ public class RequestLogInterceptor implements HandlerInterceptor {
         if (userIdObj instanceof Long) {
             userId = (Long) userIdObj;
         } else {
-            String credential = request.getHeader("Authorization");
-            if (credential != null && credential.startsWith("Bearer ")) {
-                credential = credential.substring(7).trim();
+            String credential = request.getHeader(LogConstants.HEADER_AUTHORIZATION);
+            if (credential != null && credential.startsWith(LogConstants.BEARER_PREFIX)) {
+                credential = credential.substring(LogConstants.BEARER_PREFIX.length()).trim();
             } else {
-                String legacy = request.getHeader("satoken");
+                String legacy = request.getHeader(LogConstants.HEADER_SA_TOKEN);
                 credential = legacy == null ? credential : legacy.trim();
             }
             if (credential != null && !credential.isEmpty()) {
@@ -86,13 +87,15 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 Objects.toString(request.getAttribute("auth.tokenName"), "-"));
 
         // 健康检查不持久化，避免无意义日志占用磁盘
-        if (uri != null && !uri.equals("/api/health") && !uri.startsWith("/api/health/")) {
+        if (uri != null && !uri.equals(LogConstants.HEALTH_CHECK_PATH) && !uri.startsWith(LogConstants.HEALTH_CHECK_PATH + "/")) {
             String reqBody = null;
             if (request instanceof ContentCachingRequestWrapper wrapper) {
                 byte[] buf = wrapper.getContentAsByteArray();
                 if (buf.length > 0) {
                     reqBody = new String(buf, StandardCharsets.UTF_8);
-                    if (reqBody.length() > 2000) reqBody = reqBody.substring(0, 2000) + "...";
+                    if (reqBody.length() > LogConstants.MAX_BODY_LOG_LENGTH) {
+                        reqBody = reqBody.substring(0, LogConstants.MAX_BODY_LOG_LENGTH) + "...";
+                    }
                 }
             }
             String respBody = null;
@@ -100,7 +103,9 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                 byte[] buf = wrapper.getContentAsByteArray();
                 if (buf.length > 0) {
                     respBody = new String(buf, StandardCharsets.UTF_8);
-                    if (respBody.length() > 2000) respBody = respBody.substring(0, 2000) + "...";
+                    if (respBody.length() > LogConstants.MAX_BODY_LOG_LENGTH) {
+                        respBody = respBody.substring(0, LogConstants.MAX_BODY_LOG_LENGTH) + "...";
+                    }
                 }
             }
             String errorMsg = null;
@@ -114,7 +119,9 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                     if (msg != null) errorMsg = msg.toString();
                 }
             }
-            if (errorMsg != null && errorMsg.length() > 2000) errorMsg = errorMsg.substring(0, 2000);
+            if (errorMsg != null && errorMsg.length() > LogConstants.MAX_ERROR_LOG_LENGTH) {
+                errorMsg = errorMsg.substring(0, LogConstants.MAX_ERROR_LOG_LENGTH);
+            }
 
             HttpRequestLog logRecord = HttpRequestLog.builder()
                     .clientIp(clientIp)
@@ -123,8 +130,8 @@ public class RequestLogInterceptor implements HandlerInterceptor {
                     .queryParams(query)
                     .statusCode(response.getStatus())
                     .durationMs(costMs)
-                    .userAgent(request.getHeader("User-Agent"))
-                    .referer(request.getHeader("Referer"))
+                    .userAgent(request.getHeader(LogConstants.HEADER_USER_AGENT))
+                    .referer(request.getHeader(LogConstants.HEADER_REFERER))
                     .userId(userId)
                     .requestBody(reqBody)
                     .responseBody(respBody)

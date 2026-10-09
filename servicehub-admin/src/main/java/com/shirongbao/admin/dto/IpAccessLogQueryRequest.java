@@ -5,6 +5,7 @@
  */
 package com.shirongbao.admin.dto;
 
+import com.shirongbao.common.constant.LogConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,28 +17,28 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class IpAccessLogQueryRequest {
     private String ip;
-    private Integer page = 1;
-    private Integer size = 50;
-    private String range = "24h";
+    private Integer page = LogConstants.DEFAULT_PAGE;
+    private Integer size = LogConstants.DEFAULT_PAGE_SIZE;
+    private String range = LogConstants.RANGE_24H;
     private String method;
     private String path;
     private String statusGroup;
 
     // 获取统计时间跨度小时数
     public int getIntervalHours() {
-        return "7d".equalsIgnoreCase(range) ? 168 : 24;
+        return LogConstants.RANGE_7D.equalsIgnoreCase(range) ? LogConstants.HOURS_168 : LogConstants.HOURS_24;
     }
 
     // 计算分页偏移量
     public int getOffset() {
-        int p = page != null ? Math.max(1, page) : 1;
+        int p = page != null ? Math.max(1, page) : LogConstants.DEFAULT_PAGE;
         return (p - 1) * getLimit();
     }
 
     // 获取受保护的分页大小（最大 200 条）
     public int getLimit() {
-        int s = size != null ? size : 50;
-        return Math.max(1, Math.min(s, 200));
+        int s = size != null ? size : LogConstants.DEFAULT_PAGE_SIZE;
+        return Math.max(1, Math.min(s, LogConstants.MAX_PAGE_SIZE));
     }
 
     // 获取格式化后的请求方法

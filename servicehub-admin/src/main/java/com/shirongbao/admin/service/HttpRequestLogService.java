@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import com.shirongbao.admin.dto.*;
 import com.shirongbao.admin.entity.HttpRequestLog;
 import com.shirongbao.admin.mapper.HttpRequestLogMapper;
+import com.shirongbao.common.constant.LogConstants;
 import com.shirongbao.common.utils.IpRegionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -40,17 +41,17 @@ public class HttpRequestLogService {
         if (logMapper == null || log == null) return;
         asyncExecutor.execute(() -> {
             try {
-                if (log.getPath() != null && log.getPath().length() > 512) {
-                    log.setPath(log.getPath().substring(0, 512));
+                if (log.getPath() != null && log.getPath().length() > LogConstants.MAX_PATH_LENGTH) {
+                    log.setPath(log.getPath().substring(0, LogConstants.MAX_PATH_LENGTH));
                 }
-                if (log.getQueryParams() != null && log.getQueryParams().length() > 1024) {
-                    log.setQueryParams(log.getQueryParams().substring(0, 1024));
+                if (log.getQueryParams() != null && log.getQueryParams().length() > LogConstants.MAX_QUERY_LENGTH) {
+                    log.setQueryParams(log.getQueryParams().substring(0, LogConstants.MAX_QUERY_LENGTH));
                 }
-                if (log.getUserAgent() != null && log.getUserAgent().length() > 512) {
-                    log.setUserAgent(log.getUserAgent().substring(0, 512));
+                if (log.getUserAgent() != null && log.getUserAgent().length() > LogConstants.MAX_HEADER_LENGTH) {
+                    log.setUserAgent(log.getUserAgent().substring(0, LogConstants.MAX_HEADER_LENGTH));
                 }
-                if (log.getReferer() != null && log.getReferer().length() > 512) {
-                    log.setReferer(log.getReferer().substring(0, 512));
+                if (log.getReferer() != null && log.getReferer().length() > LogConstants.MAX_HEADER_LENGTH) {
+                    log.setReferer(log.getReferer().substring(0, LogConstants.MAX_HEADER_LENGTH));
                 }
                 logMapper.insertLog(log);
             } catch (Exception ignored) {
@@ -64,9 +65,9 @@ public class HttpRequestLogService {
         List<Map<String, Object>> list = logMapper.selectLogs(request);
 
         for (Map<String, Object> row : list) {
-            String ipAddr = (String) row.get("ip_address");
+            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
             if (ipAddr != null) {
-                row.put("region", IpRegionUtils.getRegion(ipAddr));
+                row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
             }
         }
 
@@ -82,8 +83,8 @@ public class HttpRequestLogService {
 
         List<Map<String, Object>> topIps = logMapper.getTopIps(request);
         for (Map<String, Object> row : topIps) {
-            String ipAddr = (String) row.get("ip_address");
-            row.put("region", IpRegionUtils.getRegion(ipAddr));
+            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
+            row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
         }
 
         List<Map<String, Object>> latencyDistribution = logMapper.getLatencyDistribution(request);
@@ -108,9 +109,9 @@ public class HttpRequestLogService {
         List<Map<String, Object>> list = logMapper.selectIpLogs(request);
 
         for (Map<String, Object> row : list) {
-            String ipAddr = (String) row.get("ip_address");
+            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
             if (ipAddr != null) {
-                row.put("region", IpRegionUtils.getRegion(ipAddr));
+                row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
             }
         }
 

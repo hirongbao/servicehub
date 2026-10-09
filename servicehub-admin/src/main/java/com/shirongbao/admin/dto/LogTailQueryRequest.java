@@ -5,17 +5,18 @@
  */
 package com.shirongbao.admin.dto;
 
+import com.shirongbao.common.constant.LogConstants;
 import lombok.Data;
 
 @Data
 public class LogTailQueryRequest {
-    private Integer lines = 200;
+    private Integer lines = LogConstants.DEFAULT_TAIL_LINES;
     private String keyword;
 
     // 获取受保护的读取行数（1 - 1000 行）
     public int getLimitLines() {
-        int l = lines != null ? lines : 200;
-        return Math.max(1, Math.min(l, 1000));
+        int l = lines != null ? lines : LogConstants.DEFAULT_TAIL_LINES;
+        return Math.max(1, Math.min(l, LogConstants.MAX_TAIL_LINES));
     }
 
     // 获取格式化后的搜索关键词
