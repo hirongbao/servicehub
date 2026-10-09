@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -59,63 +60,112 @@ public class HttpRequestLogService {
         });
     }
 
-    // 分页查询 HTTP 请求访问日志列表并解析 IP 归属地
+    // 分页查询 HTTP 请求访问日志列表并异步解析 IP 归属地
     public AccessLogPageResponse getAccessLogs(AccessLogQueryRequest request) {
-        long total = logMapper.countLogs(request);
-        List<Map<String, Object>> list = logMapper.selectLogs(request);
+        CompletableFuture<Long> totalFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.countLogs(request), asyncExecutor);
 
-        for (Map<String, Object> row : list) {
-            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-            if (ipAddr != null) {
-                row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+        CompletableFuture<List<Map<String, Object>>> listFuture = CompletableFuture.supplyAsync(() -> {
+            List<Map<String, Object>> list = logMapper.selectLogs(request);
+            for (Map<String, Object> row : list) {
+                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
+                if (ipAddr != null) {
+                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+                }
             }
-        }
+            return list;
+        }, asyncExecutor);
 
-        return new AccessLogPageResponse(list, total, request.getPage(), request.getLimit());
+        CompletableFuture.allOf(totalFuture, listFuture).join();
+        return new AccessLogPageResponse(listFuture.join(), totalFuture.join(), request.getPage(), request.getLimit());
     }
 
-    // 查询系统流量、状态码与耗时聚合统计概览
+    // 查询系统流量、状态码与耗时聚合统计概览（采用虚拟线程异步并发查询）
     public LogStatsResponse getStats(LogStatsQueryRequest request) {
-        Map<String, Object> summary = logMapper.getSummary(request);
-        List<Map<String, Object>> hourlyTrend = logMapper.getHourlyTrend(request);
-        List<Map<String, Object>> statusDistribution = logMapper.getStatusDistribution(request);
-        List<Map<String, Object>> topPaths = logMapper.getTopPaths(request);
+        CompletableFuture<Map<String, Object>> summaryFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getSummary(request), asyncExecutor);
 
-        List<Map<String, Object>> topIps = logMapper.getTopIps(request);
-        for (Map<String, Object> row : topIps) {
-            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-            row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
-        }
+        CompletableFuture<List<Map<String, Object>>> hourlyTrendFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getHourlyTrend(request), asyncExecutor);
 
-        List<Map<String, Object>> latencyDistribution = logMapper.getLatencyDistribution(request);
+        CompletableFuture<List<Map<String, Object>>> statusDistributionFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getStatusDistribution(request), asyncExecutor);
 
-        return new LogStatsResponse(summary, hourlyTrend, statusDistribution, topPaths, topIps, latencyDistribution);
-    }
+        CompletableFuture<List<Map<String, Object>>> topPathsFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getTopPaths(request), asyncExecutor);
 
-    // 查询指定 IP 的聚合统计与请求时间线分布
-    public IpStatsResponse getIpStats(IpStatsQueryRequest request) {
-        Map<String, Object> summary = logMapper.getIpSummary(request);
-        String region = IpRegionUtils.getRegion(request.getIp());
-        List<Map<String, Object>> statusDistribution = logMapper.getIpStatusDistribution(request);
-        List<Map<String, Object>> topPaths = logMapper.getIpTopPaths(request);
-        List<Map<String, Object>> timeDistribution = logMapper.getIpTimeDistribution(request);
-
-        return new IpStatsResponse(summary, region, statusDistribution, topPaths, timeDistribution);
-    }
-
-    // 分页查询指定 IP 的请求明细日志并解析 IP 归属地
-    public AccessLogPageResponse getIpAccessLogs(IpAccessLogQueryRequest request) {
-        long total = logMapper.countIpLogs(request);
-        List<Map<String, Object>> list = logMapper.selectIpLogs(request);
-
-        for (Map<String, Object> row : list) {
-            String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-            if (ipAddr != null) {
+        CompletableFuture<List<Map<String, Object>>> topIpsFuture = CompletableFuture.supplyAsync(() -> {
+            List<Map<String, Object>> topIps = logMapper.getTopIps(request);
+            for (Map<String, Object> row : topIps) {
+                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
                 row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
             }
-        }
+            return topIps;
+        }, asyncExecutor);
 
-        return new AccessLogPageResponse(list, total, request.getPage(), request.getLimit());
+        CompletableFuture<List<Map<String, Object>>> latencyDistributionFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getLatencyDistribution(request), asyncExecutor);
+
+        CompletableFuture.allOf(
+                summaryFuture, hourlyTrendFuture, statusDistributionFuture,
+                topPathsFuture, topIpsFuture, latencyDistributionFuture
+        ).join();
+
+        return new LogStatsResponse(
+                summaryFuture.join(),
+                hourlyTrendFuture.join(),
+                statusDistributionFuture.join(),
+                topPathsFuture.join(),
+                topIpsFuture.join(),
+                latencyDistributionFuture.join()
+        );
+    }
+
+    // 查询指定 IP 的聚合统计与请求时间线分布（采用虚拟线程异步并发查询）
+    public IpStatsResponse getIpStats(IpStatsQueryRequest request) {
+        String region = IpRegionUtils.getRegion(request.getIp());
+
+        CompletableFuture<Map<String, Object>> summaryFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getIpSummary(request), asyncExecutor);
+
+        CompletableFuture<List<Map<String, Object>>> statusDistributionFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getIpStatusDistribution(request), asyncExecutor);
+
+        CompletableFuture<List<Map<String, Object>>> topPathsFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getIpTopPaths(request), asyncExecutor);
+
+        CompletableFuture<List<Map<String, Object>>> timeDistributionFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.getIpTimeDistribution(request), asyncExecutor);
+
+        CompletableFuture.allOf(summaryFuture, statusDistributionFuture, topPathsFuture, timeDistributionFuture).join();
+
+        return new IpStatsResponse(
+                summaryFuture.join(),
+                region,
+                statusDistributionFuture.join(),
+                topPathsFuture.join(),
+                timeDistributionFuture.join()
+        );
+    }
+
+    // 分页查询指定 IP 的请求明细日志并异步解析 IP 归属地
+    public AccessLogPageResponse getIpAccessLogs(IpAccessLogQueryRequest request) {
+        CompletableFuture<Long> totalFuture = CompletableFuture.supplyAsync(
+                () -> logMapper.countIpLogs(request), asyncExecutor);
+
+        CompletableFuture<List<Map<String, Object>>> listFuture = CompletableFuture.supplyAsync(() -> {
+            List<Map<String, Object>> list = logMapper.selectIpLogs(request);
+            for (Map<String, Object> row : list) {
+                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
+                if (ipAddr != null) {
+                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+                }
+            }
+            return list;
+        }, asyncExecutor);
+
+        CompletableFuture.allOf(totalFuture, listFuture).join();
+        return new AccessLogPageResponse(listFuture.join(), totalFuture.join(), request.getPage(), request.getLimit());
     }
 
     // 实时读取应用运行时日志文件末尾内容
