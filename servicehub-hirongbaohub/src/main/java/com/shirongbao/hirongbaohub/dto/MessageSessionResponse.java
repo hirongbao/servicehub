@@ -16,4 +16,25 @@ public class MessageSessionResponse {
     private String lastMessageContent;
     private LocalDateTime lastMessageTime;
     private Integer unreadCount;
+
+    // 兼容前端 target* 字段
+    public Long getTargetUserId() {
+        return otherUserId;
+    }
+
+    public String getTargetNickname() {
+        return otherUserName;
+    }
+
+    public String getTargetAccountName() {
+        return otherUserName;
+    }
+
+    public String getTargetAvatarUrl() {
+        return otherUserAvatar;
+    }
+
+    public String getLastMessage() {
+        return lastMessageContent;
+    }
 }

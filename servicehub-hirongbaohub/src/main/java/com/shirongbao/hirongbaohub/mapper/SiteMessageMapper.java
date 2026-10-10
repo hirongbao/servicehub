@@ -21,7 +21,7 @@ public interface SiteMessageMapper extends BaseMapper<SiteMessage> {
     @Select("""
         SELECT
             u.id AS otherUserId,
-            u.nickname AS otherUserName,
+            COALESCE(NULLIF(u.nickname, ''), u.account_name) AS otherUserName,
             u.avatar_url AS otherUserAvatar,
             m.content AS lastMessageContent,
             m.created_at AS lastMessageTime,

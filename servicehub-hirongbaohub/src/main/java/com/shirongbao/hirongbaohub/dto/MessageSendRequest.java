@@ -10,5 +10,6 @@ import lombok.Data;
 @Data
 public class MessageSendRequest {
     private Long receiverId;
+    private String receiverAccount;
     private String content;
 }

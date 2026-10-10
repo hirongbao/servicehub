@@ -1,7 +1,7 @@
 /*
  * auth: hirongbao
  * create: 2026-10-07
- * desc: 绔欏唴绉佷俊鏈嶅姟
+ * desc: 站内私信业务服务
  */
 package com.shirongbao.hirongbaohub.service;
 
@@ -31,9 +31,11 @@ public class SiteMessageService {
     private final SiteMessageMapper messageMapper;
     private final SiteUserMapper userMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SiteNotificationService noticeService;
 
-    // 鍙戦€佺淇?    @Transactional(rollbackFor = Exception.class)
-    public void send(Long senderId, Long receiverId, String content) {
+    // 发送私信并推送通知
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResponse send(Long senderId, Long receiverId, String content) {
         SiteMessage message = new SiteMessage();
         message.setSenderId(senderId);
         message.setReceiverId(receiverId);
@@ -42,18 +44,46 @@ public class SiteMessageService {
         message.setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
 
-        // 閫氱煡鎺ユ敹鏂?        notifyUnreadCount(receiverId);
+        SiteUser sender = userMapper.selectById(senderId);
+        MessageResponse dto = new MessageResponse();
+        dto.setId(message.getId());
+        dto.setSenderId(senderId);
+        dto.setReceiverId(receiverId);
+        dto.setContent(content);
+        dto.setIsRead(false);
+        dto.setCreatedAt(message.getCreatedAt());
+        if (sender != null) {
+            String senderDisplayName = (sender.getNickname() != null && !sender.getNickname().isBlank()) ? sender.getNickname() : sender.getAccountName();
+            dto.setSenderName(senderDisplayName);
+            dto.setSenderAvatar(sender.getAvatarUrl());
+        }
+
+        // 推送实时私信消息与未读数给接收方
+        long unreadCount = getUnreadCount(receiverId);
+        Map<String, Object> payload = Map.of(
+                "type", "MESSAGE",
+                "unreadCount", unreadCount,
+                "message", dto
+        );
+        messagingTemplate.convertAndSend("/topic/notify/" + receiverId, payload);
+
+        // 写入通知中心记录
+        String senderName = sender != null ? ((sender.getNickname() != null && !sender.getNickname().isBlank()) ? sender.getNickname() : sender.getAccountName()) : "用户";
+        String summary = content.length() > 30 ? content.substring(0, 30) + "..." : content;
+        noticeService.notify(receiverId, "MESSAGE", message.getId(), senderName, summary);
+
+        return dto;
     }
 
-    // 鑾峰彇浼氳瘽鍒楄〃
+    // 获取会话列表
     public List<MessageSessionResponse> getSessions(Long userId) {
         return messageMapper.getSessions(userId);
     }
 
-    // 鑾峰彇鑱婂ぉ鍘嗗彶璁板綍
+    // 获取聊天历史记录
     @Transactional(rollbackFor = Exception.class)
     public Page<MessageResponse> getHistory(Long currentUserId, Long otherUserId, int page, int size) {
-        // 鏇存柊鏈鐘舵€佷负宸茶
+        // 更新未读状态为已读
         LambdaUpdateWrapper<SiteMessage> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(SiteMessage::getReceiverId, currentUserId)
                 .eq(SiteMessage::getSenderId, otherUserId)
@@ -61,22 +91,19 @@ public class SiteMessageService {
                 .set(SiteMessage::getIsRead, true);
         messageMapper.update(null, updateWrapper);
 
-        // 鑾峰彇鏇存柊鍚庣殑鎬绘湭璇绘暟骞舵帹閫佺粰褰撳墠鐢ㄦ埛
+        // 获取更新后的总未读数并推送给当前用户
         notifyUnreadCount(currentUserId);
 
-        // 鍒嗛〉鏌ヨ鍘嗗彶娑堟伅
+        // 分页查询历史消息
         Page<SiteMessage> messagePage = new Page<>(page, size);
         LambdaQueryWrapper<SiteMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.nested(i -> i.eq(SiteMessage::getSenderId, currentUserId).eq(SiteMessage::getReceiverId, otherUserId))
                 .or(i -> i.eq(SiteMessage::getSenderId, otherUserId).eq(SiteMessage::getReceiverId, currentUserId))
                 .orderByDesc(SiteMessage::getCreatedAt);
-        
+
         messageMapper.selectPage(messagePage, queryWrapper);
 
-        // 杞崲 DTO
-        Page<MessageResponse> responsePage = new Page<>(page, size, messagePage.getTotal());
-        
-        // 鎵归噺鏌ヨ鐢ㄦ埛淇℃伅
+        // 批量查询用户信息
         List<Long> userIds = messagePage.getRecords().stream()
                 .map(SiteMessage::getSenderId)
                 .distinct()
@@ -94,17 +121,22 @@ public class SiteMessageService {
             dto.setCreatedAt(msg.getCreatedAt());
             SiteUser sender = userMap.get(msg.getSenderId());
             if (sender != null) {
-                dto.setSenderName(sender.getNickname());
+                String senderDisplayName = (sender.getNickname() != null && !sender.getNickname().isBlank()) ? sender.getNickname() : sender.getAccountName();
+                dto.setSenderName(senderDisplayName);
                 dto.setSenderAvatar(sender.getAvatarUrl());
             }
             return dto;
         }).collect(Collectors.toList());
 
+        // 按时间升序（从旧到新）排列历史消息
+        java.util.Collections.reverse(dtos);
+
+        Page<MessageResponse> responsePage = new Page<>(page, size, messagePage.getTotal());
         responsePage.setRecords(dtos);
         return responsePage;
     }
 
-    // 鑾峰彇鎬绘湭璇绘暟
+    // 获取总未读数
     public long getUnreadCount(Long userId) {
         LambdaQueryWrapper<SiteMessage> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SiteMessage::getReceiverId, userId)
@@ -112,7 +144,7 @@ public class SiteMessageService {
         return messageMapper.selectCount(queryWrapper);
     }
 
-    // 鍙戦€?WebSocket 鏈娑堟伅閫氱煡
+    // 发送 WebSocket 未读消息通知
     private void notifyUnreadCount(Long userId) {
         long unreadCount = getUnreadCount(userId);
         Map<String, Object> payload = Map.of(
@@ -122,4 +154,3 @@ public class SiteMessageService {
         messagingTemplate.convertAndSend("/topic/notify/" + userId, payload);
     }
 }
-
