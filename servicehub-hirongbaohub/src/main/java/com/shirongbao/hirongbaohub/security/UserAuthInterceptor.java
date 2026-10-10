@@ -37,7 +37,11 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 return true;
             }
         }
-        
+
+        if (request.getRequestURI() != null && request.getRequestURI().endsWith("/unread-count")) {
+            return true;
+        }
+
         reject(response);
         return false;
     }
