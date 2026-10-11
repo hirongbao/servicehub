@@ -8,3 +8,4 @@ application-local.yml
 !.env.example
 .DS_Store
 logs/
+.servicehub_secret

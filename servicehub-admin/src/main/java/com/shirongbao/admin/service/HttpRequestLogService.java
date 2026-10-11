@@ -68,9 +68,11 @@ public class HttpRequestLogService {
         CompletableFuture<List<Map<String, Object>>> listFuture = CompletableFuture.supplyAsync(() -> {
             List<Map<String, Object>> list = logMapper.selectLogs(request);
             for (Map<String, Object> row : list) {
-                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-                if (ipAddr != null) {
-                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+                Object ipObj = row.get(LogConstants.FIELD_IP_ADDRESS);
+                if (ipObj != null) {
+                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(String.valueOf(ipObj)));
+                } else {
+                    row.put(LogConstants.FIELD_REGION, "未知");
                 }
             }
             return list;
@@ -97,8 +99,12 @@ public class HttpRequestLogService {
         CompletableFuture<List<Map<String, Object>>> topIpsFuture = CompletableFuture.supplyAsync(() -> {
             List<Map<String, Object>> topIps = logMapper.getTopIps(request);
             for (Map<String, Object> row : topIps) {
-                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-                row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+                Object ipObj = row.get(LogConstants.FIELD_IP_ADDRESS);
+                if (ipObj != null) {
+                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(String.valueOf(ipObj)));
+                } else {
+                    row.put(LogConstants.FIELD_REGION, "未知");
+                }
             }
             return topIps;
         }, asyncExecutor);
@@ -156,9 +162,11 @@ public class HttpRequestLogService {
         CompletableFuture<List<Map<String, Object>>> listFuture = CompletableFuture.supplyAsync(() -> {
             List<Map<String, Object>> list = logMapper.selectIpLogs(request);
             for (Map<String, Object> row : list) {
-                String ipAddr = (String) row.get(LogConstants.FIELD_IP_ADDRESS);
-                if (ipAddr != null) {
-                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(ipAddr));
+                Object ipObj = row.get(LogConstants.FIELD_IP_ADDRESS);
+                if (ipObj != null) {
+                    row.put(LogConstants.FIELD_REGION, IpRegionUtils.getRegion(String.valueOf(ipObj)));
+                } else {
+                    row.put(LogConstants.FIELD_REGION, "未知");
                 }
             }
             return list;

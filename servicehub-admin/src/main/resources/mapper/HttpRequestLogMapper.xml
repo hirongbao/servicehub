@@ -9,7 +9,7 @@
 
     <sql id="logConditions">
         <where>
-            <if test="cleanIp != null and cleanIp != ''"> AND text(client_ip) LIKE CONCAT('%', #{cleanIp}, '%')</if>
+            <if test="cleanIp != null and cleanIp != ''"> AND host(client_ip) LIKE CONCAT('%', #{cleanIp}, '%')</if>
             <if test="cleanMethod != null and cleanMethod != ''"> AND method = #{cleanMethod}</if>
             <if test="cleanPath != null and cleanPath != ''"> AND path LIKE CONCAT('%', #{cleanPath}, '%')</if>
             <if test="statusCode != null"> AND status_code = #{statusCode}</if>
@@ -27,7 +27,7 @@
     </select>
 
     <select id="selectLogs" resultType="map">
-        SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
+        SELECT id, host(client_ip) AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
                duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
                user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs
@@ -71,10 +71,10 @@
     </select>
 
     <select id="getTopIps" resultType="map">
-        SELECT text(client_ip) AS ip_address, COUNT(*) AS count, MAX(created_at) AS last_seen 
+        SELECT host(client_ip) AS ip_address, COUNT(*) AS count, MAX(created_at) AS last_seen 
         FROM http_request_logs 
         WHERE created_at &gt;= NOW() - (#{intervalHours} * INTERVAL '1 HOUR') 
-        GROUP BY text(client_ip) ORDER BY count DESC LIMIT 10
+        GROUP BY host(client_ip) ORDER BY count DESC LIMIT 10
     </select>
 
     <select id="getLatencyDistribution" resultType="map">
@@ -148,7 +148,7 @@
     </select>
 
     <select id="selectIpLogs" resultType="map">
-        SELECT id, client_ip AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
+        SELECT id, host(client_ip) AS ip_address, method, path, query_params->>'raw' AS query_string, status_code, 
                duration_ms AS cost_ms, request_headers->>'User-Agent' AS user_agent, request_headers->>'Referer' AS referer, 
                user_id, request_body, response_body, error_message, created_at 
         FROM http_request_logs

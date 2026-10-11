@@ -57,13 +57,12 @@ class AdminCredentialServiceTest {
         assertFalse(service.verify("a.b"));
     }
 
-    // 未配置密钥时每次启动应生成不同的随机密钥
+    // 未配置密钥时应持久化密钥至文件，保证多实例或重启后登录态不失效
     @Test
-    void randomSecretDiffersBetweenInstances() {
+    void secretPersistsAcrossInstances() {
         AdminCredentialService a = new AdminCredentialService("");
         AdminCredentialService b = new AdminCredentialService("");
-        assertNotEquals(a.issue("hirongbao"), b.issue("hirongbao"));
-        assertFalse(b.verify(a.issue("hirongbao")));
+        assertTrue(b.verify(a.issue("hirongbao")));
     }
 
     // 剩余有效期不足 20 天时应续期出新凭证
