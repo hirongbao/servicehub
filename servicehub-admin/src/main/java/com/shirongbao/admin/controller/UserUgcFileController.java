@@ -26,6 +26,7 @@ public class UserUgcFileController {
     private final FileRecordService fileRecordService;
     private final StringRedisTemplate redisTemplate;
 
+    // 检查上传频率限制
     private void checkRateLimit() {
         String key1m = "rate_limit:upload:1m";
         String key1h = "rate_limit:upload:1h";
@@ -44,11 +45,15 @@ public class UserUgcFileController {
         if (count1d != null && count1d > 300) throw new IllegalArgumentException("操作太频繁，今日上传次数已达上限");
     }
 
-    @PostMapping(value = "/upload", consumes = "multipart/form-data")
-    public ApiResponse<FileRecord> upload(@RequestPart("file") MultipartFile file) {
+    // UGC 上传图片文件
+    @PostMapping(value = "/upload", consumes = {"multipart/form-data", "*/*"})
+    public ApiResponse<FileRecord> upload(@RequestParam(value = "file", required = false) MultipartFile file) {
         Long userId = UserContext.getUserId();
         if (userId == null) {
             throw new IllegalArgumentException("必须登录才能上传图片");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传文件不能为空，请使用 multipart/form-data 表单并在 'file' 字段选择上传的文件");
         }
         checkRateLimit();
         // UGC 上传的图片来源标记为 UGC

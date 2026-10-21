@@ -9,10 +9,15 @@ import com.shirongbao.common.response.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -45,6 +50,36 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ApiResponse<Void> handleMaxUploadSize(MaxUploadSizeExceededException e) {
         return ApiResponse.error("图片大小不能超过 10MB");
+    }
+
+    // 处理请求媒体类型不支持异常
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ApiResponse<Void> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        return ApiResponse.error("请求媒体类型不支持，上传图片请使用 multipart/form-data 格式");
+    }
+
+    // 处理请求方法不支持异常
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ApiResponse<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        return ApiResponse.error("不支持的请求方法：" + e.getMethod());
+    }
+
+    // 处理缺失请求部件异常
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ApiResponse<Void> handleMissingRequestPart(MissingServletRequestPartException e) {
+        return ApiResponse.error("缺少必填文件参数：" + e.getRequestPartName() + "，请确保表单字段名为 'file'");
+    }
+
+    // 处理缺失请求参数异常
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ApiResponse<Void> handleMissingRequestParam(MissingServletRequestParameterException e) {
+        return ApiResponse.error("缺少必填请求参数：" + e.getParameterName());
+    }
+
+    // 处理 Multipart 解析失败异常
+    @ExceptionHandler(MultipartException.class)
+    public ApiResponse<Void> handleMultipartException(MultipartException e) {
+        return ApiResponse.error("文件上传请求解析失败，请检查请求是否为包含有效 boundary 的 multipart/form-data 格式");
     }
 
     // 兜底处理未知异常，记录日志并返回通用消息

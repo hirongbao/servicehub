@@ -1,3 +1,8 @@
+/*
+ * auth: hirongbao
+ * create: 2026-09-02
+ * desc: FileHub 开放接口控制器
+ */
 package com.shirongbao.filehub.controller;
 
 import lombok.RequiredArgsConstructor;
@@ -18,7 +23,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,20 +36,24 @@ public class PublicFileHubController {
     private final ServiceTokenService tokenService;
 
     // 使用 FileHub Token 上传图片
-    @Operation(summary = "上传媒体文件", description = "支持上传单张图片或文件。支持格式：jpg/png/webp/gif 等。")
+    @Operation(summary = "上传媒体文件", description = "支持上传单张图片或文件。支持格式：jpg/png/webp/gif 等。请使用 multipart/form-data 格式并在 'file' 字段附带图片。")
     @SecurityRequirement(name = "X-Service-Token")
     @SecurityRequirement(name = "BearerAuth")
-    @PostMapping(value = "/upload", consumes = "multipart/form-data")
+    @PostMapping(value = "/upload", consumes = {"multipart/form-data", "*/*"})
     public ApiResponse<FileRecord> upload(
-            @Parameter(description = "媒体文件") @RequestPart("file") MultipartFile file,
+            @Parameter(description = "媒体文件") @RequestParam(value = "file", required = false) MultipartFile file,
             @Parameter(description = "自定义固定标识（非必填，填入可固定最终 URL 不变）") @RequestParam(required = false) String customKey,
             @Parameter(hidden = true) HttpServletRequest request,
             @Parameter(description = "通过自定义 Header 传递访问凭证") @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
             @Parameter(description = "通过标准 Authorization Header 传递凭证 (Bearer xxx)") @RequestHeader(value = "Authorization", required = false) String authorization) {
         recordUsage(request, serviceToken, authorization, "upload");
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传文件不能为空，请使用 multipart/form-data 表单格式并在 'file' 字段选择上传的文件");
+        }
         return ApiResponse.success(service.upload(file, customKey, "API"));
     }
 
+    // 删除媒体文件
     @Operation(summary = "删除媒体文件", description = "根据 ID 删除文件。只能删除通过开放 API 上传的独立文件。")
     @SecurityRequirement(name = "X-Service-Token")
     @SecurityRequirement(name = "BearerAuth")

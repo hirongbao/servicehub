@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,10 +32,13 @@ public class FileHubController {
     public ApiResponse<List<FileRecord>> list() { return ApiResponse.success(service.list()); }
 
     // 上传图片文件
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = {"multipart/form-data", "*/*"})
     public ApiResponse<FileRecord> upload(
-            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(required = false) String customKey) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传文件不能为空，请使用 multipart/form-data 表单并在 'file' 字段选择上传的文件");
+        }
         return ApiResponse.success(service.upload(file, customKey));
     }
 
